@@ -1,9 +1,16 @@
-# Fauxcus — Task Management App (Django + DRF + React + Docker)
-![Python](https://img.shields.io/badge/Python-3.11-blue)
-![Django](https://img.shields.io/badge/Django-6.x-green)
-![React](https://img.shields.io/badge/React-Vite-61DAFB)
-![Docker](https://img.shields.io/badge/Docker-Containerized-blue)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Database-blue)
+<p align="center">
+  <img src="docs/logo.png" alt="Fauxcus" width="360">
+</p>
+
+<h1 align="center">Task Management App (Django + DRF + React + Docker)</h1>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/Python-3.11-blue" alt="Python">
+  <img src="https://img.shields.io/badge/Django-6.x-green" alt="Django">
+  <img src="https://img.shields.io/badge/React-Vite-61DAFB" alt="React">
+  <img src="https://img.shields.io/badge/Docker-Containerized-blue" alt="Docker">
+  <img src="https://img.shields.io/badge/PostgreSQL-Database-blue" alt="PostgreSQL">
+</p>
 
 ## Overview
 
