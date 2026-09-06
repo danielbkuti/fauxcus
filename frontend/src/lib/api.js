@@ -1,4 +1,10 @@
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
+// Empty string, not undefined, when unset — on Render the frontend is
+// now served from the same origin as this API (see Dockerfile.render/
+// WHITENOISE_ROOT), so VITE_API_BASE_URL is deliberately never set at
+// build time there and every request below should just be a relative
+// path. `${undefined}${path}` would silently produce the literal
+// string "undefined/user/api/..." instead.
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || ''
 
 /**
  * Reads a cookie by name. Used to pull the `csrftoken` Django sets on us

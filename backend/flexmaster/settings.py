@@ -91,6 +91,14 @@ AUTH_USER_MODEL = 'user.CustomUser'
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    # Serves the built frontend (see WHITENOISE_ROOT below) directly out
+    # of this same process on Render — must sit early, before anything
+    # that assumes every request is an API call. A no-op locally: local
+    # dev never has frontend/dist (the Vite dev server on :3000 handles
+    # the frontend there instead), so WhiteNoise just finds nothing to
+    # serve and every request falls through to Django's normal routing
+    # exactly as before.
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -193,6 +201,16 @@ STATICFILES_DIRS = [
     BASE_DIR / "static"
 ]
 
+# The built React app (Dockerfile.render's frontend-build stage output)
+# — WhiteNoise serves whatever's in here directly at the URL root
+# (index.html's own referenced /assets/*.js, /icon-a-512.png, etc.),
+# independently of STATIC_URL/STATICFILES_DIRS/collectstatic above,
+# which stay exactly as they were for Django's own static files.
+# Doesn't exist in local dev (frontend/dist is gitignored and never
+# built into the plain local Dockerfile) — WhiteNoise just no-ops if
+# the directory itself is missing, so this is safe to leave unguarded.
+WHITENOISE_ROOT = BASE_DIR.parent / "frontend" / "dist"
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 
@@ -256,9 +274,20 @@ REST_FRAMEWORK = {
 # not a Django-rendered page, so this server has to know that origin
 # instead of assuming its own (unlike the old activation email, which
 # links to itself). Also doubles as the deployed frontend's real origin
-# for CORS/CSRF below, so pointing this at e.g. a Vercel domain is the
-# only env change a real deployment needs for the two — no code change.
-FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
+# for CORS/CSRF below.
+#
+# On Render this is now the same origin as this API itself (the built
+# frontend is served straight out of this process — see
+# WHITENOISE_ROOT below and Dockerfile.render), so it defaults to
+# RENDER_EXTERNAL_HOSTNAME when present rather than needing to be set
+# by hand — the two are never actually different values there anymore.
+# An explicit FRONTEND_URL still overrides this (e.g. a custom domain
+# later, or if the frontend ever moves to its own service again).
+_render_host_for_frontend = os.getenv("RENDER_EXTERNAL_HOSTNAME")
+FRONTEND_URL = os.getenv(
+    "FRONTEND_URL",
+    f"https://{_render_host_for_frontend}" if _render_host_for_frontend else "http://localhost:3000",
+)
 
 # ADDITIONAL_TRUSTED_ORIGINS covers any other origin that needs to talk to
 # this API — a custom domain alongside the platform's own subdomain, or a

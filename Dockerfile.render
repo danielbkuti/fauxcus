@@ -1,0 +1,36 @@
+# Render-only image — builds the React frontend and bakes it into the
+# same image as the Django API, so both are served from one origin
+# (see render.yaml's own top comment for why: cross-subdomain cookies
+# between two separate *.onrender.com services were being silently
+# dropped by the browser as third-party cookies, breaking login
+# entirely). Local docker-compose keeps using the plain `Dockerfile`
+# (backend only, unchanged, no Node stage) — the Vite dev server
+# handles the frontend there instead.
+
+FROM node:20-slim AS frontend-build
+WORKDIR /frontend
+COPY frontend/package.json frontend/package-lock.json ./
+RUN npm ci
+COPY frontend/ ./
+RUN npm run build
+
+FROM python:3.12-slim
+WORKDIR /app
+
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+
+COPY requirements.txt .
+
+RUN pip install --upgrade pip
+RUN pip install -r requirements.txt
+
+COPY . .
+# Overwrites whatever the plain COPY . . above picked up for
+# frontend/dist (nothing, normally — it's gitignored — but a stray
+# local build in the host's working tree would otherwise win) with the
+# real, freshly built one from the stage above. Served by WhiteNoise —
+# see WHITENOISE_ROOT in settings.py.
+COPY --from=frontend-build /frontend/dist ./frontend/dist
+
+CMD ["sh", "render-start.sh"]
