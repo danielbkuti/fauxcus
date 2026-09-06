@@ -29,9 +29,16 @@ SECRET_KEY = os.getenv('SECRET_KEY')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv("DEBUG", "False") == "True"
 ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "localhost").split(",")
+# Render (and most similar platforms) inject this automatically on
+# every service, with the actual public *.onrender.com hostname — so
+# a Render deploy never needs ALLOWED_HOSTS set by hand at all.
+_render_host = os.getenv("RENDER_EXTERNAL_HOSTNAME")
+if _render_host:
+    ALLOWED_HOSTS.append(_render_host)
 
 # A real deployment puts the frontend and this API on two different
-# domains (e.g. a Vercel domain and a Render/Railway one), which makes
+# domains — two separate Render services here (fauxcus-frontend and
+# fauxcus-api), each on its own onrender.com subdomain — which makes
 # every session/CSRF cookie "cross-site" from the browser's point of
 # view. Django's default SameSite=Lax cookie is invisible to a fetch()
 # call from another origin — only top-level navigation gets it — so
@@ -121,17 +128,30 @@ WSGI_APPLICATION = 'flexmaster.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
+#
+# Render (like most PaaS databases) hands over one DATABASE_URL
+# connection string rather than the five discrete pieces docker-compose
+# sets — parsed here with dj-database-url rather than five more
+# fromDatabase env vars in render.yaml, whose exact property names
+# (host/port specifically) aren't documented as available outside a
+# Render *service* reference. Local dev never sets DATABASE_URL, so
+# this falls through to the existing discrete-vars config unchanged.
+_database_url = os.getenv("DATABASE_URL")
+if _database_url:
+    import dj_database_url
 
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.postgresql",
-        "NAME": os.getenv("POSTGRES_DB"),
-        "USER": os.getenv("POSTGRES_USER"),
-        "PASSWORD": os.getenv("POSTGRES_PASSWORD"),
-        "HOST": os.getenv("POSTGRES_HOST"),
-        "PORT": os.getenv("POSTGRES_PORT"),
+    DATABASES = {"default": dj_database_url.parse(_database_url, conn_max_age=600)}
+else:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": os.getenv("POSTGRES_DB"),
+            "USER": os.getenv("POSTGRES_USER"),
+            "PASSWORD": os.getenv("POSTGRES_PASSWORD"),
+            "HOST": os.getenv("POSTGRES_HOST"),
+            "PORT": os.getenv("POSTGRES_PORT"),
+        }
     }
-}
 
 # Password validation
 # https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
