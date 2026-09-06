@@ -1,0 +1,99 @@
+# Render Blueprint — provisions all four services this app needs from
+# one "New Blueprint" in the Render dashboard, pointed at this repo.
+# https://render.com/docs/blueprint-spec
+#
+# What this does NOT do (Render's blueprint spec has no way to):
+#   - Give you a same-file reference to another service's full https://
+#     URL — fromService only exposes bare host/port, not a scheme. So
+#     FRONTEND_URL, ADDITIONAL_TRUSTED_ORIGINS and VITE_API_BASE_URL
+#     below are `sync: false` (Render prompts for them in the dashboard
+#     instead of silently deploying with a blank value) — fill them in
+#     with the real onrender.com URLs Render assigns after the first
+#     deploy, then redeploy fauxcus-api and fauxcus-frontend once more.
+#   - Run migrations automatically. After the first deploy (and any
+#     deploy that adds a migration), run
+#     `python backend/manage.py migrate` from fauxcus-api's Shell tab.
+#
+# Both fauxcus-api and fauxcus-scheduler generate their own independent
+# SECRET_KEY rather than sharing one — harmless here since the
+# scheduler never touches session-signed data (it only creates
+# Notification rows and sends email), just simpler than wiring a
+# shared env var group for one value that doesn't need to match.
+
+databases:
+  - name: fauxcus-db
+    plan: free
+    postgresMajorVersion: "16"
+
+services:
+  - type: web
+    name: fauxcus-api
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    # Same image docker-compose already builds for `web`, just started
+    # with gunicorn instead of Django's own dev-only runserver.
+    dockerCommand: gunicorn flexmaster.wsgi:application --chdir backend --bind 0.0.0.0:$PORT
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DEBUG
+        value: "False"
+      - key: ALLOWED_HOSTS
+        value: localhost
+      - key: DATABASE_URL
+        fromDatabase:
+          name: fauxcus-db
+          property: connectionString
+      # Fill in after the first deploy — see the note at the top.
+      - key: FRONTEND_URL
+        sync: false
+      - key: ADDITIONAL_TRUSTED_ORIGINS
+        sync: false
+      - key: EMAIL_HOST_USER
+        sync: false
+      - key: EMAIL_HOST_PASSWORD
+        sync: false
+
+  - type: worker
+    name: fauxcus-scheduler
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    dockerCommand: python backend/scheduler.py
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DEBUG
+        value: "False"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: fauxcus-db
+          property: connectionString
+      - key: FRONTEND_URL
+        sync: false
+      - key: EMAIL_HOST_USER
+        sync: false
+      - key: EMAIL_HOST_PASSWORD
+        sync: false
+
+  - type: web
+    name: fauxcus-frontend
+    runtime: static
+    plan: free
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    envVars:
+      # Fill in with fauxcus-api's real URL after its first deploy.
+      - key: VITE_API_BASE_URL
+        sync: false
+    # React Router routes are client-side — without this, a hard
+    # refresh on e.g. /tasks/5 404s instead of loading index.html and
+    # letting the router take over.
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
