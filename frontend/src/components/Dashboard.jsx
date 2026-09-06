@@ -282,7 +282,7 @@ function UpcomingRow({ item, celebrating, onToggle }) {
         {(isOverdue || isUrgent) && <PulseRing />}
         <span
           className={cn(
-            'relative rounded-full px-2 py-0.5 text-[11px] font-medium tabular-nums transition-colors',
+            'relative rounded-full px-2 py-0.5 text-[11px] font-medium whitespace-nowrap tabular-nums transition-colors',
             isOverdue
               ? 'bg-red-700 text-white'
               : isUrgent
