@@ -36,22 +36,27 @@ _render_host = os.getenv("RENDER_EXTERNAL_HOSTNAME")
 if _render_host:
     ALLOWED_HOSTS.append(_render_host)
 
-# A real deployment puts the frontend and this API on two different
-# domains — two separate Render services here (fauxcus-frontend and
-# fauxcus-api), each on its own onrender.com subdomain — which makes
-# every session/CSRF cookie "cross-site" from the browser's point of
-# view. Django's default SameSite=Lax cookie is invisible to a fetch()
-# call from another origin — only top-level navigation gets it — so
-# login would silently appear to work (200 OK) but never actually
-# authenticate anything after it. SameSite=None fixes that, but the
-# spec requires Secure (HTTPS-only) alongside it, which is why this
-# only flips when DEBUG is off — local dev talks over plain
-# http://localhost, where a Secure-only cookie would never be sent at
-# all. SECURE_PROXY_SSL_HEADER tells Django to trust the
-# X-Forwarded-Proto header these platforms set at their edge, since the
-# app itself is reached over plain HTTP inside their network — without
-# it, request.is_secure() reads False even in production and the two
-# Secure cookies above never actually get set.
+# Historical note, not the current deployment: this app used to run as
+# two separate Render services (fauxcus-frontend and fauxcus-api), each
+# on its own onrender.com subdomain — which makes every session/CSRF
+# cookie "cross-site" from the browser's point of view. Django's
+# default SameSite=Lax cookie is invisible to a fetch() call from
+# another origin — only top-level navigation gets it — so login would
+# silently appear to work (200 OK) but never actually authenticate
+# anything after it. Fixed properly by folding the frontend into this
+# same service instead (see render.yaml) rather than by this setting —
+# same-origin requests don't need SameSite=None at all. Left in place
+# because it's harmless for same-origin traffic and keeps this correct
+# if the two ever split apart again (a different host, a staging
+# frontend on its own subdomain, etc). SameSite=None itself requires
+# Secure (HTTPS-only) alongside it, which is why this only flips when
+# DEBUG is off — local dev talks over plain http://localhost, where a
+# Secure-only cookie would never be sent at all. SECURE_PROXY_SSL_HEADER
+# tells Django to trust the X-Forwarded-Proto header these platforms
+# set at their edge, since the app itself is reached over plain HTTP
+# inside their network — without it, request.is_secure() reads False
+# even in production and the two Secure cookies above never actually
+# get set.
 SESSION_COOKIE_SAMESITE = "Lax" if DEBUG else "None"
 SESSION_COOKIE_SECURE = not DEBUG
 CSRF_COOKIE_SAMESITE = "Lax" if DEBUG else "None"

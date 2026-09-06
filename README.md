@@ -5,7 +5,7 @@
 <h1 align="center">Task Management App (Django + DRF + React + Docker)</h1>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Python-3.11-blue" alt="Python">
+  <img src="https://img.shields.io/badge/Python-3.12-blue" alt="Python">
   <img src="https://img.shields.io/badge/Django-6.x-green" alt="Django">
   <img src="https://img.shields.io/badge/React-Vite-61DAFB" alt="React">
   <img src="https://img.shields.io/badge/Docker-Containerized-blue" alt="Docker">
@@ -24,6 +24,7 @@ This project demonstrates:
 - State-driven UI architecture (one deadline-derived theme drives a card's colors, banners, and animations)
 - Containerized development environment
 - Automated backend testing
+- A free, single-service production deployment (Render + Neon Postgres) — see [Deployment](#deployment)
 
 ### Live demo
 
@@ -59,15 +60,34 @@ Components:
 
 ---
 
+# Deployment
+
+The diagram above is the local dev shape — frontend and backend as two separate processes talking over HTTP, per `docker-compose.yml`. Production ([render.yaml](render.yaml)) collapses that into one Docker service instead:
+
+```
+Render (single Docker service, Dockerfile.render)
+  ├─ React build (frontend/dist), served directly by Django via WhiteNoise
+  └─ Django REST API
+        ↓
+  Neon Postgres (managed, external)
+```
+
+This isn't just a smaller footprint — it fixes a real bug the two-service split had. `*.onrender.com` subdomains count as separate sites for cookie purposes (the same reason `*.vercel.app`/`*.github.io` work this way), so a frontend on one subdomain calling an API on another was a third-party-cookie request, and browsers increasingly block those by default: login worked with a correctly-formed `Set-Cookie` header and still failed, because the cookie never actually got stored. Folding the frontend into the same Django process makes every request same-origin, which makes the whole problem disappear rather than needing cookie-attribute workarounds. See the comments in [render.yaml](render.yaml) for the full writeup.
+
+A few more differences from local dev, all driven by staying on Render's free tier: [render-start.sh](render-start.sh) runs migrations on every boot instead of as a separate step (no Shell access to run one-off commands), the database is [Neon](https://neon.tech) (free forever) rather than a Render-managed Postgres instance (which expires 30 days after creation), and the deadline-reminder scheduler (`docker-compose.yml`'s `scheduler` service) isn't deployed at all — Render has no free tier for either a Background Worker or a Cron Job. It still runs daily in local dev; on the live demo, only the in-app side of a notification would ever appear, and only if something else created it.
+
+---
+
 # Features
 
 ### Frontend
-- Landing page with a live animated task-list preview
+- Landing page: a type-led, glass-surfaced design with a static product-shot recreation of the real dashboard, a live-data feature grid, and a three-frame "watch it work" filmstrip
 - Dashboard: animated welcome header, streak tracking, "Upcoming" list pulled from tasks and subtasks alike
 - Task list: filter/sort, bulk select and complete/delete, live date search, scroll-reveal card animations
 - Task detail page: a four-state color theme (on-track / due-soon / overdue / completed) driving the whole page's palette, a progress dial, an activity log, and celebration animations (confetti, fireworks) on completion
 - Deadline editor: a portal-based wheel picker (day/month/year, optional time-of-day), shared across every place a deadline gets set
-- Progress page: a status breakdown bar, weekly activity chart, and a GitHub-style daily-activity heatmap doubling as a streak visual
+- Progress page: a full-bleed stats band (completion rate, streaks, a 7-day sparkline, a 30/90/all-time period toggle) over a chart section — weekly created-vs-closed bars, a status breakdown, a GitHub-style daily-activity heatmap doubling as a streak visual, and day-of-week/time-of-day distributions — plus a searchable archive of everything completed
+- In-app notifications: a bell with an unread badge for tasks/subtasks due soon, backed by a daily email digest (local dev only — see [Deployment](#deployment))
 
 ### Authentication
 - Custom user model
@@ -93,6 +113,7 @@ Components:
 - Dockerized development environment
 - PostgreSQL container
 - Environment variable configuration
+- Free production deployment on Render — one Docker service serving both the API and the built frontend, Neon Postgres, zero manual server management (see [Deployment](#deployment))
 
 ### Data Integrity
 - Unique task name per user
@@ -160,8 +181,8 @@ The same page in two of its four deadline-driven states — in progress (purple,
 ### 1. Clone the Repository
 
 ```bash
-git clone <repo-url>
-cd flexmaster
+git clone https://github.com/danielbkuti/fauxcus.git
+cd fauxcus
 ```
 
 ---
@@ -203,7 +224,7 @@ docker-compose up --build
 ### 4. Run Database Migrations
 
 ```bash
-docker-compose exec web python manage.py migrate
+docker-compose exec web python backend/manage.py migrate
 ```
 
 ---
@@ -239,7 +260,7 @@ http://localhost:8637/api/
 Execute tests inside the Docker container:
 
 ```bash
-docker-compose exec web python manage.py test
+docker-compose exec web python backend/manage.py test
 ```
 
 ---
@@ -270,6 +291,10 @@ All timestamps are stored in UTC to prevent timezone inconsistencies across clie
 
 Docker ensures a consistent development environment and simplifies dependency management.
 
+### Single-Origin Production Deployment
+
+Frontend and backend were originally two separate Render services, on two separate `*.onrender.com` subdomains — which turned out to be two separate *sites* as far as browsers are concerned, making every frontend→API request a third-party-cookie situation that got silently blocked despite a correctly-formed `Set-Cookie` header. Rather than chase cookie-attribute workarounds, the fix was architectural: build the frontend into the same Docker image and let Django serve it directly (WhiteNoise + a SPA-fallback route), so there's only one origin and the problem doesn't exist in the first place. See [Deployment](#deployment).
+
 ---
 
 # Future Improvements
@@ -277,7 +302,7 @@ Docker ensures a consistent development environment and simplifies dependency ma
 - Goals and Calendar pages (currently placeholders)
 - JWT authentication
 - Asynchronous email processing (Celery)
-- Production deployment (AWS / Fly / Railway)
+- Run the deadline-reminder scheduler in production (currently local-dev-only — Render's free tier has no Background Worker or Cron Job; see [Deployment](#deployment))
 
 ---
 
