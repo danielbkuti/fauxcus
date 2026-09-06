@@ -56,13 +56,25 @@ services:
       - key: EMAIL_HOST_PASSWORD
         sync: false
 
-  - type: worker
+  # A Cron Job, not a Worker — Render has no free tier for either, but
+  # a Worker bills 24/7 like a web service (this app's own
+  # backend/scheduler.py sleep-loop only exists because docker-compose
+  # has no native scheduling), while a Cron Job bills per second of
+  # actual runtime with a $1/month minimum. Since all this ever does is
+  # run one management command once a day, the sleep-loop script is
+  # bypassed entirely here in favor of Render's own scheduling — it
+  # invokes send_deadline_digest directly.
+  - type: cron
     name: fauxcus-scheduler
     runtime: docker
-    plan: free
+    plan: 0.5c-512mb
     dockerfilePath: ./Dockerfile
     dockerContext: .
-    dockerCommand: python backend/scheduler.py
+    dockerCommand: python backend/manage.py send_deadline_digest
+    # Daily at 13:00 UTC — the same hour backend/scheduler.py's own
+    # DIGEST_HOUR_UTC uses locally. Render evaluates cron schedules in
+    # UTC.
+    schedule: "0 13 * * *"
     envVars:
       - key: SECRET_KEY
         generateValue: true
