@@ -1,0 +1,373 @@
+[
+  {
+    "name": "Finalize Q3 budget report",
+    "description": null,
+    "deadline_offset": -10.166666666666666,
+    "completed": true,
+    "completed_offset": -12.0,
+    "subtasks": []
+  },
+  {
+    "name": "Reply to client feedback",
+    "description": null,
+    "deadline_offset": -16.166666666666668,
+    "completed": true,
+    "completed_offset": -12.083333333333334,
+    "subtasks": []
+  },
+  {
+    "name": "Draft onboarding checklist",
+    "description": null,
+    "deadline_offset": -14.166666666666666,
+    "completed": true,
+    "completed_offset": -12.083333333333334,
+    "subtasks": []
+  },
+  {
+    "name": "Review teammate pull request",
+    "description": null,
+    "deadline_offset": -13.166666666666666,
+    "completed": true,
+    "completed_offset": -12.083333333333334,
+    "subtasks": []
+  },
+  {
+    "name": "Prepare investor update",
+    "description": null,
+    "deadline_offset": -12.166666666666666,
+    "completed": true,
+    "completed_offset": -12.083333333333334,
+    "subtasks": []
+  },
+  {
+    "name": "Renew domain registration",
+    "description": null,
+    "deadline_offset": -11.166666666666666,
+    "completed": true,
+    "completed_offset": -10.5,
+    "subtasks": []
+  },
+  {
+    "name": "Schedule dentist appointment",
+    "description": null,
+    "deadline_offset": -10.166666666666666,
+    "completed": true,
+    "completed_offset": -12.041666666666666,
+    "subtasks": []
+  },
+  {
+    "name": "Update team wiki page",
+    "description": null,
+    "deadline_offset": -9.875,
+    "completed": true,
+    "completed_offset": -7.916666666666667,
+    "subtasks": [
+      {
+        "name": "Publish final draft",
+        "deadline_offset": -10.041666666666666,
+        "completed": true,
+        "completed_offset": -7.916666666666667
+      }
+    ]
+  },
+  {
+    "name": "Plan Q4 roadmap kickoff",
+    "description": null,
+    "deadline_offset": -7.166666666666667,
+    "completed": true,
+    "completed_offset": -12.083333333333334,
+    "subtasks": [
+      {
+        "name": "Collect feedback from leads",
+        "deadline_offset": -9.166666666666666,
+        "completed": true,
+        "completed_offset": -12.416666666666666
+      },
+      {
+        "name": "Draft slide deck",
+        "deadline_offset": -8.166666666666666,
+        "completed": true,
+        "completed_offset": -12.083333333333334
+      }
+    ]
+  },
+  {
+    "name": "Book flights for conference",
+    "description": null,
+    "deadline_offset": -12.416666666666666,
+    "completed": true,
+    "completed_offset": -3.0416666666666665,
+    "subtasks": [
+      {
+        "name": "Print boarding passes",
+        "deadline_offset": -12.416666666666666,
+        "completed": true,
+        "completed_offset": -3.0416666666666665
+      }
+    ]
+  },
+  {
+    "name": "Send birthday gift to Sam",
+    "description": null,
+    "deadline_offset": -3.1666666666666665,
+    "completed": true,
+    "completed_offset": -11.083333333333334,
+    "subtasks": []
+  },
+  {
+    "name": "Clean up unused API endpoints",
+    "description": null,
+    "deadline_offset": -12.333333333333334,
+    "completed": true,
+    "completed_offset": -12.083333333333334,
+    "subtasks": []
+  },
+  {
+    "name": "Write blog post on subtasks feature",
+    "description": null,
+    "deadline_offset": 2.8333333333333335,
+    "completed": true,
+    "completed_offset": -3.0416666666666665,
+    "subtasks": [
+      {
+        "name": "Outline sections",
+        "deadline_offset": -0.16666666666666666,
+        "completed": true,
+        "completed_offset": -7.916666666666667
+      },
+      {
+        "name": "Decide Topic",
+        "deadline_offset": 330.875,
+        "completed": true,
+        "completed_offset": -3.0416666666666665
+      }
+    ]
+  },
+  {
+    "name": "Renew car insurance",
+    "description": null,
+    "deadline_offset": 5.833333333333333,
+    "completed": true,
+    "completed_offset": -12.5,
+    "subtasks": []
+  },
+  {
+    "name": "Organize team offsite",
+    "description": null,
+    "deadline_offset": 13.875,
+    "completed": true,
+    "completed_offset": -14.875,
+    "subtasks": [
+      {
+        "name": "Book venue",
+        "deadline_offset": -8.166666666666666,
+        "completed": true,
+        "completed_offset": null
+      },
+      {
+        "name": "Send calendar invites",
+        "deadline_offset": 4.833333333333333,
+        "completed": true,
+        "completed_offset": null
+      }
+    ]
+  },
+  {
+    "name": "Submit expense reports",
+    "description": null,
+    "deadline_offset": -20.166666666666668,
+    "completed": true,
+    "completed_offset": null,
+    "subtasks": []
+  },
+  {
+    "name": "Fix login page contrast bug",
+    "description": null,
+    "deadline_offset": -25.166666666666668,
+    "completed": true,
+    "completed_offset": null,
+    "subtasks": []
+  },
+  {
+    "name": "Migrate database to new server",
+    "description": null,
+    "deadline_offset": -30.166666666666668,
+    "completed": true,
+    "completed_offset": null,
+    "subtasks": []
+  },
+  {
+    "name": "Water the office plants",
+    "description": null,
+    "deadline_offset": null,
+    "completed": true,
+    "completed_offset": -14.875,
+    "subtasks": []
+  },
+  {
+    "name": "Read design system docs",
+    "description": null,
+    "deadline_offset": null,
+    "completed": true,
+    "completed_offset": -10.208333333333334,
+    "subtasks": []
+  },
+  {
+    "name": "Follow up with Sarah on contract terms",
+    "description": null,
+    "deadline_offset": -1.9166666666666667,
+    "completed": true,
+    "completed_offset": -3.0416666666666665,
+    "subtasks": []
+  },
+  {
+    "name": "Fix flaky checkout test in CI",
+    "description": null,
+    "deadline_offset": 0.08333333333333333,
+    "completed": false,
+    "completed_offset": null,
+    "subtasks": []
+  },
+  {
+    "name": "Rehearse conference talk slides",
+    "description": "There are a bunch of words that I do not use often. Make sure I know how to pronounce them.",
+    "deadline_offset": 2.0833333333333335,
+    "completed": true,
+    "completed_offset": -3.0416666666666665,
+    "subtasks": [
+      {
+        "name": "Practice Enunciation Techniques",
+        "deadline_offset": null,
+        "completed": true,
+        "completed_offset": -3.0416666666666665
+      }
+    ]
+  },
+  {
+    "name": "Set up 1:1s with new hires",
+    "description": null,
+    "deadline_offset": -3.0416666666666665,
+    "completed": true,
+    "completed_offset": -3.0416666666666665,
+    "subtasks": [
+      {
+        "name": "Download onboarding software",
+        "deadline_offset": -35.916666666666664,
+        "completed": true,
+        "completed_offset": -3.0416666666666665
+      }
+    ]
+  },
+  {
+    "name": "Debug memory leak in worker service",
+    "description": null,
+    "deadline_offset": 6.083333333333333,
+    "completed": false,
+    "completed_offset": null,
+    "subtasks": []
+  },
+  {
+    "name": "Draft performance review notes",
+    "description": null,
+    "deadline_offset": 8.083333333333334,
+    "completed": false,
+    "completed_offset": null,
+    "subtasks": []
+  },
+  {
+    "name": "Compare moving company quotes",
+    "description": null,
+    "deadline_offset": 10.083333333333334,
+    "completed": false,
+    "completed_offset": null,
+    "subtasks": []
+  },
+  {
+    "name": "Update resume with recent projects",
+    "description": null,
+    "deadline_offset": 12.083333333333334,
+    "completed": false,
+    "completed_offset": null,
+    "subtasks": []
+  },
+  {
+    "name": "Confirm venue for team dinner",
+    "description": null,
+    "deadline_offset": 14.083333333333334,
+    "completed": false,
+    "completed_offset": null,
+    "subtasks": []
+  },
+  {
+    "name": "Reconcile October expense report",
+    "description": null,
+    "deadline_offset": 16.083333333333332,
+    "completed": false,
+    "completed_offset": null,
+    "subtasks": []
+  },
+  {
+    "name": "Research standing desk options",
+    "description": null,
+    "deadline_offset": 18.083333333333332,
+    "completed": true,
+    "completed_offset": -3.0416666666666665,
+    "subtasks": []
+  },
+  {
+    "name": "Renew passport before October trip",
+    "description": null,
+    "deadline_offset": 20.083333333333332,
+    "completed": true,
+    "completed_offset": -3.0416666666666665,
+    "subtasks": []
+  },
+  {
+    "name": "Buy anniversary gift",
+    "description": null,
+    "deadline_offset": 22.083333333333332,
+    "completed": false,
+    "completed_offset": null,
+    "subtasks": []
+  },
+  {
+    "name": "Return library books",
+    "description": null,
+    "deadline_offset": 24.083333333333332,
+    "completed": false,
+    "completed_offset": null,
+    "subtasks": []
+  },
+  {
+    "name": "Schedule car maintenance",
+    "description": null,
+    "deadline_offset": 26.083333333333332,
+    "completed": false,
+    "completed_offset": null,
+    "subtasks": []
+  },
+  {
+    "name": "Write thank-you note to mentor",
+    "description": null,
+    "deadline_offset": 28.083333333333332,
+    "completed": true,
+    "completed_offset": -3.0416666666666665,
+    "subtasks": []
+  },
+  {
+    "name": "Pick up dry cleaning",
+    "description": null,
+    "deadline_offset": 30.083333333333332,
+    "completed": false,
+    "completed_offset": null,
+    "subtasks": []
+  },
+  {
+    "name": "Finish tax documents for accountant",
+    "description": null,
+    "deadline_offset": 32.083333333333336,
+    "completed": false,
+    "completed_offset": null,
+    "subtasks": []
+  }
+]
