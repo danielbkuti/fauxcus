@@ -87,9 +87,12 @@ services:
         sync: false
       - key: EMAIL_HOST_PASSWORD
         sync: false
-      # Set to "true" for one deploy to populate demo@example.com with
-      # a realistic task history on a fresh database — see
-      # render-start.sh and seed_demo_data.py. Idempotent, so it's
-      # fine to leave set afterward.
+      # Populates demo@example.com with a realistic task history the
+      # first time this runs against a database where that account has
+      # no tasks yet (a fresh Neon DB, or the demo account's tasks
+      # having just been cleared to reseed with corrected data) — see
+      # render-start.sh and seed_demo_data.py. Idempotent (no-ops once
+      # the account has any tasks), so left on permanently rather than
+      # flipped back off after the first successful run.
       - key: SEED_DEMO_DATA
-        value: "false"
+        value: "true"
