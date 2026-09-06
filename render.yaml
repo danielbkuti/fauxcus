@@ -27,9 +27,14 @@
 #     below are `sync: false` too — fill them in with the real
 #     onrender.com URLs Render assigns after the first deploy, then
 #     redeploy fauxcus-api and fauxcus-frontend once more.
-#   - Automatic migrations. After the first deploy (and any deploy that
-#     adds one), run `python backend/manage.py migrate` from
-#     fauxcus-api's Shell tab.
+#
+# Migrations run automatically instead of needing a manual step: Shell
+# access and the "Pre-Deploy Command" feature are both paid-only on
+# Render, so `migrate` is chained straight into fauxcus-api's own start
+# command below rather than something you'd run separately. It's safe
+# to run on every boot (including every cold-start wake from the free
+# plan's 15-minute idle spin-down, not just real deploys) — Django's
+# migration runner is a no-op once everything's already applied.
 
 services:
   - type: web
@@ -39,8 +44,9 @@ services:
     dockerfilePath: ./Dockerfile
     dockerContext: .
     # Same image docker-compose already builds for `web`, just started
-    # with gunicorn instead of Django's own dev-only runserver.
-    dockerCommand: gunicorn flexmaster.wsgi:application --chdir backend --bind 0.0.0.0:$PORT
+    # with gunicorn instead of Django's own dev-only runserver — and
+    # with `migrate` run first every time (see the note above).
+    dockerCommand: sh -c "python backend/manage.py migrate --noinput && gunicorn flexmaster.wsgi:application --chdir backend --bind 0.0.0.0:$PORT"
     envVars:
       - key: SECRET_KEY
         generateValue: true
