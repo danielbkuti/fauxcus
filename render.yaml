@@ -70,6 +70,12 @@ services:
         sync: false
       - key: EMAIL_HOST_PASSWORD
         sync: false
+      # Set to "true" for one deploy to populate demo@example.com with
+      # a realistic task history on a fresh database — see
+      # render-start.sh and seed_demo_data.py. Idempotent, so it's
+      # fine to leave set afterward.
+      - key: SEED_DEMO_DATA
+        value: "false"
 
   - type: web
     name: fauxcus-frontend
