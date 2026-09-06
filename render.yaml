@@ -1,29 +1,35 @@
-# Render Blueprint — provisions all four services this app needs from
-# one "New Blueprint" in the Render dashboard, pointed at this repo.
+# Render Blueprint — provisions the two services this needs to be
+# viewable for $0/month from one "New Blueprint" in the Render
+# dashboard, pointed at this repo.
 # https://render.com/docs/blueprint-spec
 #
-# What this does NOT do (Render's blueprint spec has no way to):
-#   - Give you a same-file reference to another service's full https://
-#     URL — fromService only exposes bare host/port, not a scheme. So
+# What's deliberately NOT in here, and why:
+#   - A Render-managed Postgres database. Render's free Postgres
+#     expires 30 days after creation (14-day grace period, then it's
+#     deleted with all its data) — not actually free for anything you
+#     want to keep working. Use Neon (neon.tech) instead: free forever,
+#     no card, no expiration. Sign up, create a project, and paste its
+#     connection string into fauxcus-api's DATABASE_URL below by hand
+#     (`sync: false` — Render prompts for it rather than deploying with
+#     it blank) — settings.py already accepts DATABASE_URL directly
+#     via dj-database-url, so this needs zero code changes.
+#   - The scheduler (backend/scheduler.py's daily deadline-digest
+#     email). Render has no free tier for either a Worker (bills 24/7
+#     regardless of plan) or a Cron Job ($1/month minimum) — dropped
+#     here so the whole deployment stays genuinely free. Add it back
+#     later as a `type: cron` service (schedule: "0 13 * * *",
+#     dockerCommand: python backend/manage.py send_deadline_digest)
+#     whenever the daily reminder email is worth a dollar a month to
+#     you; nothing else in this file needs to change to add it.
+#   - A same-file reference to another service's full https:// URL —
+#     fromService only exposes bare host/port, not a scheme. So
 #     FRONTEND_URL, ADDITIONAL_TRUSTED_ORIGINS and VITE_API_BASE_URL
-#     below are `sync: false` (Render prompts for them in the dashboard
-#     instead of silently deploying with a blank value) — fill them in
-#     with the real onrender.com URLs Render assigns after the first
-#     deploy, then redeploy fauxcus-api and fauxcus-frontend once more.
-#   - Run migrations automatically. After the first deploy (and any
-#     deploy that adds a migration), run
-#     `python backend/manage.py migrate` from fauxcus-api's Shell tab.
-#
-# Both fauxcus-api and fauxcus-scheduler generate their own independent
-# SECRET_KEY rather than sharing one — harmless here since the
-# scheduler never touches session-signed data (it only creates
-# Notification rows and sends email), just simpler than wiring a
-# shared env var group for one value that doesn't need to match.
-
-databases:
-  - name: fauxcus-db
-    plan: free
-    postgresMajorVersion: "16"
+#     below are `sync: false` too — fill them in with the real
+#     onrender.com URLs Render assigns after the first deploy, then
+#     redeploy fauxcus-api and fauxcus-frontend once more.
+#   - Automatic migrations. After the first deploy (and any deploy that
+#     adds one), run `python backend/manage.py migrate` from
+#     fauxcus-api's Shell tab.
 
 services:
   - type: web
@@ -42,49 +48,13 @@ services:
         value: "False"
       - key: ALLOWED_HOSTS
         value: localhost
+      # Neon's connection string — see the note at the top.
       - key: DATABASE_URL
-        fromDatabase:
-          name: fauxcus-db
-          property: connectionString
+        sync: false
       # Fill in after the first deploy — see the note at the top.
       - key: FRONTEND_URL
         sync: false
       - key: ADDITIONAL_TRUSTED_ORIGINS
-        sync: false
-      - key: EMAIL_HOST_USER
-        sync: false
-      - key: EMAIL_HOST_PASSWORD
-        sync: false
-
-  # A Cron Job, not a Worker — Render has no free tier for either, but
-  # a Worker bills 24/7 like a web service (this app's own
-  # backend/scheduler.py sleep-loop only exists because docker-compose
-  # has no native scheduling), while a Cron Job bills per second of
-  # actual runtime with a $1/month minimum. Since all this ever does is
-  # run one management command once a day, the sleep-loop script is
-  # bypassed entirely here in favor of Render's own scheduling — it
-  # invokes send_deadline_digest directly.
-  - type: cron
-    name: fauxcus-scheduler
-    runtime: docker
-    plan: 0.5c-512mb
-    dockerfilePath: ./Dockerfile
-    dockerContext: .
-    dockerCommand: python backend/manage.py send_deadline_digest
-    # Daily at 13:00 UTC — the same hour backend/scheduler.py's own
-    # DIGEST_HOUR_UTC uses locally. Render evaluates cron schedules in
-    # UTC.
-    schedule: "0 13 * * *"
-    envVars:
-      - key: SECRET_KEY
-        generateValue: true
-      - key: DEBUG
-        value: "False"
-      - key: DATABASE_URL
-        fromDatabase:
-          name: fauxcus-db
-          property: connectionString
-      - key: FRONTEND_URL
         sync: false
       - key: EMAIL_HOST_USER
         sync: false
