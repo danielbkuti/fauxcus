@@ -5,6 +5,7 @@
 <h1 align="center">Task Management App (Django + DRF + React + Docker)</h1>
 
 <p align="center">
+  <a href="https://github.com/danielbkuti/fauxcus/actions/workflows/ci.yml"><img src="https://github.com/danielbkuti/fauxcus/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <img src="https://img.shields.io/badge/Python-3.12-blue" alt="Python">
   <img src="https://img.shields.io/badge/Django-6.x-green" alt="Django">
   <img src="https://img.shields.io/badge/React-Vite-61DAFB" alt="React">
