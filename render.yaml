@@ -44,9 +44,13 @@ services:
     dockerfilePath: ./Dockerfile
     dockerContext: .
     # Same image docker-compose already builds for `web`, just started
-    # with gunicorn instead of Django's own dev-only runserver — and
-    # with `migrate` run first every time (see the note above).
-    dockerCommand: sh -c "python backend/manage.py migrate --noinput && gunicorn flexmaster.wsgi:application --chdir backend --bind 0.0.0.0:$PORT"
+    # via render-start.sh (migrate, then gunicorn — see that file and
+    # the note above) instead of Django's own dev-only runserver. Not
+    # an inline `sh -c "... && ..."` string here — that exited 127
+    # ("command not found"): dockerCommand doesn't appear to go through
+    # a real shell parse, so the embedded quotes broke instead of
+    # being consumed as quoting syntax.
+    dockerCommand: sh render-start.sh
     envVars:
       - key: SECRET_KEY
         generateValue: true
