@@ -18,6 +18,12 @@ This project demonstrates:
 - Containerized development environment
 - Automated backend testing
 
+### Live demo
+
+**[fauxcus-api.onrender.com](https://fauxcus-api.onrender.com)**
+
+Log in with `demo@example.com` / `DemoPass123!` to see a seeded account with real tasks and subtasks in every deadline state. It's hosted on Render's free tier, so the first request after a period of inactivity can take about a minute to spin the container back up — later requests are fast.
+
 ---
 
 # Architecture
@@ -256,12 +262,6 @@ All timestamps are stored in UTC to prevent timezone inconsistencies across clie
 ### Dockerized Environment
 
 Docker ensures a consistent development environment and simplifies dependency management.
-
----
-
-## API Preview
-
-![API Root](docs/api-root.png)
 
 ---
 
