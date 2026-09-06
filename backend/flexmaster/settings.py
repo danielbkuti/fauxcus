@@ -30,6 +30,27 @@ SECRET_KEY = os.getenv('SECRET_KEY')
 DEBUG = os.getenv("DEBUG", "False") == "True"
 ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "localhost").split(",")
 
+# A real deployment puts the frontend and this API on two different
+# domains (e.g. a Vercel domain and a Render/Railway one), which makes
+# every session/CSRF cookie "cross-site" from the browser's point of
+# view. Django's default SameSite=Lax cookie is invisible to a fetch()
+# call from another origin — only top-level navigation gets it — so
+# login would silently appear to work (200 OK) but never actually
+# authenticate anything after it. SameSite=None fixes that, but the
+# spec requires Secure (HTTPS-only) alongside it, which is why this
+# only flips when DEBUG is off — local dev talks over plain
+# http://localhost, where a Secure-only cookie would never be sent at
+# all. SECURE_PROXY_SSL_HEADER tells Django to trust the
+# X-Forwarded-Proto header these platforms set at their edge, since the
+# app itself is reached over plain HTTP inside their network — without
+# it, request.is_secure() reads False even in production and the two
+# Secure cookies above never actually get set.
+SESSION_COOKIE_SAMESITE = "Lax" if DEBUG else "None"
+SESSION_COOKIE_SECURE = not DEBUG
+CSRF_COOKIE_SAMESITE = "Lax" if DEBUG else "None"
+CSRF_COOKIE_SECURE = not DEBUG
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+
 # Application definition
 
 INSTALLED_APPS = [
@@ -210,23 +231,30 @@ REST_FRAMEWORK = {
     "PAGE_SIZE": 10,
 }
 
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",
-]
-
-CORS_ALLOW_CREDENTIALS = True
-
-# Required for the React dev server (localhost:3000) to make authenticated
-# POST/PATCH/DELETE requests against this API (localhost:8637) — Django's
-# CSRF middleware rejects cross-origin unsafe requests unless the origin is
-# explicitly trusted here, separately from CORS.
-CSRF_TRUSTED_ORIGINS = [
-    "http://localhost:3000",
-]
-
 # Where the React app lives — needed because the multi-step signup flow's
 # verification email links to a React route (/signup/verify/<token>/),
 # not a Django-rendered page, so this server has to know that origin
 # instead of assuming its own (unlike the old activation email, which
-# links to itself).
+# links to itself). Also doubles as the deployed frontend's real origin
+# for CORS/CSRF below, so pointing this at e.g. a Vercel domain is the
+# only env change a real deployment needs for the two — no code change.
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
+
+# ADDITIONAL_TRUSTED_ORIGINS covers any other origin that needs to talk to
+# this API — a custom domain alongside the platform's own subdomain, or a
+# host (like Vercel) that gives every preview deploy its own random
+# subdomain FRONTEND_URL alone can't predict. Comma-separated, e.g.
+# "https://fauxcus.com,https://fauxcus-git-my-branch.vercel.app".
+_extra_origins = [o.strip() for o in os.getenv("ADDITIONAL_TRUSTED_ORIGINS", "").split(",") if o.strip()]
+
+# The local dev server's origin stays trusted unconditionally — a
+# deployed FRONTEND_URL replacing it here would otherwise break local
+# development against a prod-configured .env.
+CORS_ALLOWED_ORIGINS = list(dict.fromkeys(["http://localhost:3000", FRONTEND_URL, *_extra_origins]))
+CORS_ALLOW_CREDENTIALS = True
+
+# Required for a cross-origin frontend to make authenticated
+# POST/PATCH/DELETE requests against this API — Django's CSRF middleware
+# rejects cross-origin unsafe requests unless the origin is explicitly
+# trusted here, separately from CORS.
+CSRF_TRUSTED_ORIGINS = list(dict.fromkeys(["http://localhost:3000", FRONTEND_URL, *_extra_origins]))
