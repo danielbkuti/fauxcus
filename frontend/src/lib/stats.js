@@ -250,4 +250,68 @@ export function computeStats(tasks) {
   }
 }
 
+// The Progress page's 30/90/all-time toggle — the one windowed view
+// onto this data (see design_handoff_progress_page/README.md). Kept as
+// a separate function from computeStats rather than a `{ since }`
+// param threaded through it: only three figures move with the period
+// (completion rate, on-time rate, typical turnaround) while overview
+// totals, streaks, distributions, weekly and dailyActivity all stay on
+// the full history regardless of which pill is selected, so the two
+// concerns don't need to share one signature.
+//
+// `windowDays` null means "all time" (no lower bound on `since`).
+//
+// The completion-rate denominator is *not* totalTasks — a 30-day
+// window judged against every task ever created would read as
+// artificially low and get lower still the longer the app's been used.
+// Instead it's "of what had activity in this window" — tasks created
+// in it, or completed in it (a task can be both, or neither, and still
+// not count) — a currently-open task only counts against a period once
+// something happens to it (created) *in* that period, not just because
+// it happens to still be open today. That's what makes "all time"
+// collapse to exactly totalTasks: with since = the beginning of time,
+// every task was "created in it".
+export function computePeriodStats(tasks, windowDays = null) {
+  const sinceMs = windowDays == null ? -Infinity : Date.now() - windowDays * DAY_MS
+
+  const completedInPeriod = tasks.filter(
+    (t) => t.completed && t.dateCompleted && new Date(t.dateCompleted).getTime() >= sinceMs
+  )
+  const eligible = tasks.filter((t) => {
+    const createdInPeriod = new Date(t.dateCreated).getTime() >= sinceMs
+    const completedInIt = t.completed && t.dateCompleted && new Date(t.dateCompleted).getTime() >= sinceMs
+    return createdInPeriod || completedInIt
+  })
+
+  const completionRate = eligible.length > 0 ? (completedInPeriod.length / eligible.length) * 100 : null
+
+  const datedCompletions = completedInPeriod
+    .filter((t) => t.dateDeadline && t.dateCompleted)
+    .map((t) => new Date(t.dateDeadline) - new Date(t.dateCompleted))
+  const onTimeRate =
+    datedCompletions.length > 0
+      ? (datedCompletions.filter((lead) => lead >= 0).length / datedCompletions.length) * 100
+      : null
+  const avgLeadMs =
+    datedCompletions.length > 0 ? datedCompletions.reduce((a, b) => a + b, 0) / datedCompletions.length : null
+
+  const completionDurations = completedInPeriod
+    .filter((t) => t.dateCreated && t.dateCompleted)
+    .map((t) => new Date(t.dateCompleted) - new Date(t.dateCreated))
+  const avgCompletionMs =
+    completionDurations.length > 0
+      ? completionDurations.reduce((a, b) => a + b, 0) / completionDurations.length
+      : null
+
+  return {
+    completionRate,
+    completedCount: completedInPeriod.length,
+    eligibleCount: eligible.length,
+    onTimeRate,
+    datedCompletionCount: datedCompletions.length,
+    avgLeadMs,
+    avgCompletionMs,
+  }
+}
+
 export { formatDuration, formatPercent }

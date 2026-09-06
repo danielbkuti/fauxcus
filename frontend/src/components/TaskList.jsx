@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { ListChecks, SquarePlus, X } from 'lucide-react'
 import { TaskCard, SubtaskStackCard } from '@/components/TaskCard'
 import { OverdueGateModal, collectOverdueItems } from '@/components/OverdueGateModal'
@@ -76,6 +76,11 @@ const SUBTASK_CELEBRATION_MS = 1400
 
 export function TaskList() {
   const navigate = useNavigate()
+  // A caller can arrive here asking for a filter pre-applied — today
+  // just the Progress page's "Open the N overdue" link — via router
+  // state rather than a URL query param, since this is a same-app
+  // navigation, not a shareable/bookmarkable link.
+  const location = useLocation()
   // Sourced from the shared store (loaded once, at the authenticated
   // layout level) rather than an independent fetch of its own — this
   // is the same store AddTaskFab and the other task pages read and
@@ -101,7 +106,7 @@ export function TaskList() {
   // just dismissed.
   const overdueCheckedRef = useRef(false)
   const [sortMode, setSortMode] = useState('due')
-  const [filterMode, setFilterMode] = useState('all')
+  const [filterMode, setFilterMode] = useState(() => location.state?.filter ?? 'all')
 
   // Bulk select: off by default, and a plain id Set rather than
   // anything fancier — "is this id selected" is the only question
