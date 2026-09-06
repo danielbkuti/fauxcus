@@ -18,11 +18,10 @@ from django.contrib import admin
 from django.urls import path, include, re_path
 from django.views.generic import RedirectView
 
-from pages.views import api_root_view
+from pages.views import spa_view
 
 urlpatterns = [
 
-    path('', api_root_view, name='home'),
     path('admin/', admin.site.urls),
     path('tasks/', include('tasks.urls')),
 
@@ -34,4 +33,10 @@ urlpatterns = [
 
     # API_Views
     path('api/', include('tasks.api.urls')),
+
+    # Catch-all for the built React app — must stay last so every real
+    # backend route above gets first crack at matching. Covers both
+    # '/' and every React Router client-side path (e.g. /tasks/5), so
+    # a hard refresh doesn't 404. See pages.views.spa_view.
+    re_path(r'^.*$', spa_view),
 ]

@@ -1,52 +1,68 @@
-# Render Blueprint — provisions the two services this needs to be
+# Render Blueprint — provisions the one service this needs to be
 # viewable for $0/month from one "New Blueprint" in the Render
 # dashboard, pointed at this repo.
 # https://render.com/docs/blueprint-spec
 #
-# What's deliberately NOT in here, and why:
+# One service, not two: frontend and backend used to be a separate
+# Render static site and web service, but that put them on two
+# different *.onrender.com subdomains — and *.onrender.com subdomains
+# are treated as separate sites from each other for cookie purposes
+# (same reason *.vercel.app/*.github.io work this way: a hosting
+# platform's own domain has to, for its customers' security). Every
+# request from the frontend to the API was a third-party-cookie
+# situation, and browsers increasingly block those by default —
+# confirmed live: the API's Set-Cookie was correctly formed
+# (SameSite=None; Secure) and worked fine visiting fauxcus-api
+# directly, but document.cookie came back completely empty after the
+# same request made cross-subdomain from fauxcus-frontend. No amount
+# of cookie-attribute tuning fixes that; it's architectural.
+#
+# Fixed by folding the frontend into this same service instead:
+# Dockerfile.render builds it in a Node stage and WhiteNoise serves
+# the result directly out of this Django process (see
+# WHITENOISE_ROOT in settings.py, and pages.views.spa_view for the
+# React-Router-refresh fallback) — same origin, so it's just a plain
+# same-site cookie now, and VITE_API_BASE_URL/FRONTEND_URL cross-service
+# URL wiring isn't needed at all anymore (FRONTEND_URL self-derives
+# from RENDER_EXTERNAL_HOSTNAME).
+#
+# What's still deliberately NOT in here, and why:
 #   - A Render-managed Postgres database. Render's free Postgres
 #     expires 30 days after creation (14-day grace period, then it's
 #     deleted with all its data) — not actually free for anything you
 #     want to keep working. Use Neon (neon.tech) instead: free forever,
 #     no card, no expiration. Sign up, create a project, and paste its
-#     connection string into fauxcus-api's DATABASE_URL below by hand
-#     (`sync: false` — Render prompts for it rather than deploying with
-#     it blank) — settings.py already accepts DATABASE_URL directly
-#     via dj-database-url, so this needs zero code changes.
+#     connection string into DATABASE_URL below by hand (`sync: false`
+#     — Render prompts for it rather than deploying with it blank) —
+#     settings.py already accepts DATABASE_URL directly via
+#     dj-database-url, so this needs zero code changes.
 #   - The scheduler (backend/scheduler.py's daily deadline-digest
 #     email). Render has no free tier for either a Worker (bills 24/7
 #     regardless of plan) or a Cron Job ($1/month minimum) — dropped
 #     here so the whole deployment stays genuinely free. Add it back
 #     later as a `type: cron` service (schedule: "0 13 * * *",
-#     dockerCommand: python backend/manage.py send_deadline_digest)
-#     whenever the daily reminder email is worth a dollar a month to
-#     you; nothing else in this file needs to change to add it.
-#   - A same-file reference to another service's full https:// URL —
-#     fromService only exposes bare host/port, not a scheme. So
-#     FRONTEND_URL, ADDITIONAL_TRUSTED_ORIGINS and VITE_API_BASE_URL
-#     below are `sync: false` too — fill them in with the real
-#     onrender.com URLs Render assigns after the first deploy, then
-#     redeploy fauxcus-api and fauxcus-frontend once more.
+#     dockerCommand: python backend/manage.py send_deadline_digest,
+#     same dockerfilePath/dockerContext as below) whenever the daily
+#     reminder email is worth a dollar a month to you.
 #
 # Migrations run automatically instead of needing a manual step: Shell
 # access and the "Pre-Deploy Command" feature are both paid-only on
-# Render, so `migrate` is chained straight into fauxcus-api's own start
-# command below rather than something you'd run separately. It's safe
-# to run on every boot (including every cold-start wake from the free
-# plan's 15-minute idle spin-down, not just real deploys) — Django's
-# migration runner is a no-op once everything's already applied.
+# Render, so `migrate` is chained straight into this service's own
+# start command below rather than something you'd run separately. It's
+# safe to run on every boot (including every cold-start wake from the
+# free plan's 15-minute idle spin-down, not just real deploys) —
+# Django's migration runner is a no-op once everything's already
+# applied.
 
 services:
   - type: web
     name: fauxcus-api
     runtime: docker
     plan: free
-    dockerfilePath: ./Dockerfile
+    dockerfilePath: ./Dockerfile.render
     dockerContext: .
-    # Same image docker-compose already builds for `web`, just started
-    # via render-start.sh (migrate, then gunicorn — see that file and
-    # the note above) instead of Django's own dev-only runserver. Not
-    # an inline `sh -c "... && ..."` string here — that exited 127
+    # migrate, then gunicorn — see render-start.sh and the note above.
+    # Not an inline `sh -c "... && ..."` string here — that exited 127
     # ("command not found"): dockerCommand doesn't appear to go through
     # a real shell parse, so the embedded quotes broke instead of
     # being consumed as quoting syntax.
@@ -61,9 +77,10 @@ services:
       # Neon's connection string — see the note at the top.
       - key: DATABASE_URL
         sync: false
-      # Fill in after the first deploy — see the note at the top.
-      - key: FRONTEND_URL
-        sync: false
+      # Optional, comma-separated — a custom domain, most likely, if
+      # you ever add one. Not needed for the plain onrender.com URL:
+      # FRONTEND_URL self-derives from RENDER_EXTERNAL_HOSTNAME now
+      # that frontend and backend are the same service.
       - key: ADDITIONAL_TRUSTED_ORIGINS
         sync: false
       - key: EMAIL_HOST_USER
@@ -76,21 +93,3 @@ services:
       # fine to leave set afterward.
       - key: SEED_DEMO_DATA
         value: "false"
-
-  - type: web
-    name: fauxcus-frontend
-    runtime: static
-    rootDir: frontend
-    buildCommand: npm install && npm run build
-    staticPublishPath: dist
-    envVars:
-      # Fill in with fauxcus-api's real URL after its first deploy.
-      - key: VITE_API_BASE_URL
-        sync: false
-    # React Router routes are client-side — without this, a hard
-    # refresh on e.g. /tasks/5 404s instead of loading index.html and
-    # letting the router take over.
-    routes:
-      - type: rewrite
-        source: /*
-        destination: /index.html
