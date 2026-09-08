@@ -16,8 +16,8 @@ class TriggerDeadlineDigestViewTestCase(APITestCase):
     Covers tasks.api.views.TriggerDeadlineDigestView — the endpoint a
     GitHub Actions cron (.github/workflows/deadline-digest-cron.yml)
     calls daily to run send_deadline_digest in production, since
-    Render's free tier has no Worker/Cron Job for backend/scheduler.py's
-    loop there. Auth here is a shared-secret bearer token
+    Render's free tier has no Worker/Cron Job to host any persistent
+    scheduler there. Auth here is a shared-secret bearer token
     (DIGEST_CRON_TOKEN), not a session — this endpoint is unauthenticated
     by design where the token itself is unset, which every non-happy-path
     test below relies on staying refused rather than silently open.

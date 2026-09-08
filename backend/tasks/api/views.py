@@ -91,7 +91,7 @@ class TriggerDeadlineDigestView(APIView):
     POST-only endpoint that runs `manage.py send_deadline_digest` on
     demand. Exists so a free external scheduler can trigger the daily
     digest in production — Render's free tier has no Worker/Cron Job to
-    run backend/scheduler.py's loop there (see render.yaml's own
+    host any persistent scheduler there (see render.yaml's own
     comments), so nothing does this in prod otherwise. Meant to be
     called once a day by .github/workflows/deadline-digest-cron.yml.
 

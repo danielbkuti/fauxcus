@@ -1,16 +1,18 @@
 name: Deadline digest cron
 
 # Runs the daily deadline-digest email in production. Render's free
-# tier has no Worker/Cron Job to run backend/scheduler.py's loop there
+# tier has no Worker/Cron Job to host any persistent scheduler there
 # (see render.yaml's own comments), so this workflow is what actually
 # triggers it live — hitting a protected endpoint
 # (tasks.api.views.TriggerDeadlineDigestView) once a day instead.
-# backend/scheduler.py keeps running as-is for local dev only
-# (docker-compose.yml's `scheduler` service).
+# Local dev runs the same job on its own schedule instead, via Celery
+# Beat (backend/flexmaster/celery.py, docker-compose.yml's celery_beat
+# service) — this workflow never runs there, same as it never touches
+# Redis or Celery at all.
 
 on:
   schedule:
-    # 13:00 UTC daily — matches backend/scheduler.py's default
+    # 13:00 UTC daily — matches CELERY_BEAT_SCHEDULE's default
     # DIGEST_HOUR_UTC, just so local dev and prod agree on "when".
     - cron: "0 13 * * *"
   workflow_dispatch: {}

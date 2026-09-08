@@ -53,16 +53,27 @@ services:
       - flexmaster_network
 
 
-  # Runs the daily deadline-digest notification job (see
-  # backend/scheduler.py) — a plain sleep-until-target-time loop, not
-  # Celery/Celery Beat. Same image/env as `web`, just a different
-  # command, so it needs no separate Dockerfile.
-  scheduler:
-    build: .
-    container_name: flexmaster_scheduler
+  # Broker for Celery (backend/flexmaster/celery.py) — hands the daily
+  # deadline-digest job from celery_beat (below) to celery_worker.
+  # Local-dev-only, same as both of those: no persistent process runs
+  # in production at all (see render.yaml's own comments on why).
+  redis:
+    image: redis:7-alpine
+    container_name: flexmaster_redis
     restart: unless-stopped
 
-    command: python backend/scheduler.py
+    networks:
+      - flexmaster_network
+
+  # Executes jobs Celery Beat schedules (currently just
+  # tasks.tasks.send_deadline_digest_task). Same image/env as `web`,
+  # just a different command, so it needs no separate Dockerfile.
+  celery_worker:
+    build: .
+    container_name: flexmaster_celery_worker
+    restart: unless-stopped
+
+    command: sh -c "cd backend && celery -A flexmaster worker --loglevel=info"
 
     volumes:
       - .:/app
@@ -73,6 +84,34 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      redis:
+        condition: service_started
+
+    networks:
+      - flexmaster_network
+
+  # Replaces backend/scheduler.py's old sleep-until-target-time loop —
+  # ticks on a schedule (flexmaster.settings.CELERY_BEAT_SCHEDULE) and
+  # hands due jobs to celery_worker via redis, rather than sleeping and
+  # running a job directly itself.
+  celery_beat:
+    build: .
+    container_name: flexmaster_celery_beat
+    restart: unless-stopped
+
+    command: sh -c "cd backend && celery -A flexmaster beat --loglevel=info"
+
+    volumes:
+      - .:/app
+
+    env_file:
+      - .env
+
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
 
     networks:
       - flexmaster_network

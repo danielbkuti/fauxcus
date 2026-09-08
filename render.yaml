@@ -36,17 +36,19 @@
 #     — Render prompts for it rather than deploying with it blank) —
 #     settings.py already accepts DATABASE_URL directly via
 #     dj-database-url, so this needs zero code changes.
-#   - The scheduler (backend/scheduler.py's daily deadline-digest
-#     email) as a *Render* service. Render has no free tier for either
-#     a Worker (bills 24/7 regardless of plan) or a Cron Job ($1/month
-#     minimum), so it isn't defined here as a `type: cron` service. The
-#     digest still runs daily in production, though — for $0 — via a
-#     GitHub Actions `schedule:` workflow
-#     (.github/workflows/deadline-digest-cron.yml) that POSTs to the
-#     DIGEST_CRON_TOKEN-protected /api/internal/send-deadline-digest/
-#     endpoint below once a day. backend/scheduler.py itself keeps
-#     running only in local dev (docker-compose.yml's `scheduler`
-#     service). If a Render-native cron is ever preferred instead, add
+#   - A scheduler for the daily deadline-digest email, as a *Render*
+#     service. Render has no free tier for either a Worker (bills 24/7
+#     regardless of plan) or a Cron Job ($1/month minimum), so it isn't
+#     defined here as a `type: cron` service. The digest still runs
+#     daily in production, though — for $0 — via a GitHub Actions
+#     `schedule:` workflow (.github/workflows/deadline-digest-cron.yml)
+#     that POSTs to the DIGEST_CRON_TOKEN-protected
+#     /api/internal/send-deadline-digest/ endpoint below once a day.
+#     Local dev runs the same job on its own schedule instead, via
+#     Celery + Redis (backend/flexmaster/celery.py, docker-compose.yml's
+#     celery_worker/celery_beat/redis services) — neither of those runs
+#     in production either, same reasoning as above. If a Render-native
+#     cron is ever preferred over the GitHub Actions workflow, add
 #     it as a `type: cron` service (schedule: "0 13 * * *",
 #     dockerCommand: python backend/manage.py send_deadline_digest,
 #     same dockerfilePath/dockerContext as below) and drop the GitHub

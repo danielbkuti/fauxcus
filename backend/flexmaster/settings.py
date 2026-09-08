@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 import os.path
 from pathlib import Path
 from django.urls import reverse_lazy
+from celery.schedules import crontab
 import os
 from dotenv import load_dotenv
 import flexmaster
@@ -268,12 +269,30 @@ DEFAULT_FROM_EMAIL = 'Fauxcus <pantheraleo440@gmail.com>'
 # Shared secret for tasks.api.views.TriggerDeadlineDigestView — lets a
 # free GitHub Actions `schedule:` cron (.github/workflows/deadline-digest-cron.yml)
 # trigger `send_deadline_digest` in production over plain HTTP, since
-# Render's free tier has no Worker/Cron Job to run backend/scheduler.py's
-# loop there (see render.yaml's own comments). Must match the
+# Render's free tier has no Worker/Cron Job to run a persistent process
+# there at all (see render.yaml's own comments). Must match the
 # DIGEST_CRON_TOKEN secret set on that workflow. Unset (None/"") locally,
 # which the view treats as "digest-triggering disabled" rather than
 # "any token matches".
 DIGEST_CRON_TOKEN = os.getenv('DIGEST_CRON_TOKEN')
+
+# --- Celery (backend/flexmaster/celery.py) ---
+# Local-dev-only — see that file's docstring for why this never runs in
+# production. Runs the exact same send_deadline_digest command
+# DIGEST_CRON_TOKEN's endpoint calls directly for prod, just via Celery
+# Beat locally instead of docker-compose.yml's old `scheduler` service.
+CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL', 'redis://redis:6379/0')
+CELERY_TIMEZONE = 'UTC'
+CELERY_TASK_TRACK_STARTED = True
+CELERY_BEAT_SCHEDULE = {
+    'send-deadline-digest-daily': {
+        'task': 'tasks.tasks.send_deadline_digest_task',
+        # Same UTC hour backend/scheduler.py used to default to
+        # (DIGEST_HOUR_UTC), and the same hour the GitHub Actions
+        # digest cron uses for production — all three agree on "when".
+        'schedule': crontab(hour=int(os.getenv('DIGEST_HOUR_UTC', '13')), minute=0),
+    },
+}
 #
 # ACCOUNT_LOGIN_METHODS = {'email'}
 # ACCOUNT_SIGNUP_FIELDS = ['email*', 'username*', 'password1*', 'password2*']
