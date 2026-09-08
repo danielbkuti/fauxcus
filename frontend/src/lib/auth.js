@@ -4,10 +4,10 @@ export function checkAuth() {
   return apiFetch('/user/api/auth/')
 }
 
-export function login(username, password) {
+export function login(username, password, rememberMe = false) {
   return apiFetch('/user/api/login/', {
     method: 'POST',
-    body: { username, password },
+    body: { username, password, remember_me: rememberMe },
   })
 }
 
