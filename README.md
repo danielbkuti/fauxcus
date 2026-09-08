@@ -55,6 +55,7 @@ Components:
 | Backend | Django |
 | API | Django REST Framework |
 | Database | PostgreSQL |
+| Background jobs | Celery + Redis (local dev — see [Deployment](#deployment)) |
 | Containerization | Docker |
 | Authentication | Custom Django user model, session-cookie auth |
 | Testing | Django + DRF Test Framework |
@@ -77,7 +78,7 @@ This isn't just a smaller footprint — it fixes a real bug the two-service spli
 
 A few more differences from local dev, all driven by staying on Render's free tier: [render-start.sh](render-start.sh) runs migrations on every boot instead of as a separate step (no Shell access to run one-off commands), and the database is [Neon](https://neon.tech) (free forever) rather than a Render-managed Postgres instance (which expires 30 days after creation).
 
-The deadline-digest scheduler is also handled differently in production than in local dev, though it does run in both. Locally, `docker-compose.yml`'s `scheduler` service runs [backend/scheduler.py](backend/scheduler.py) — a plain sleep-until-target-time loop that calls `manage.py send_deadline_digest` once a day. Render's free tier has no Background Worker or Cron Job to run that same loop live, so production instead relies on a free [GitHub Actions scheduled workflow](.github/workflows/deadline-digest-cron.yml) that POSTs to a token-protected endpoint (`/api/internal/send-deadline-digest/`, guarded by `DIGEST_CRON_TOKEN`) once a day, which runs the same management command server-side. Net effect: the digest goes out daily either way, just triggered by a different scheduler depending on environment.
+The deadline-digest scheduler is also handled differently in production than in local dev, though it does run in both, on the same underlying `manage.py send_deadline_digest` command either way. Locally, it's a real broker-backed periodic task: `docker-compose.yml`'s `celery_beat` service schedules it once a day, `celery_worker` runs it, and `redis` is the broker between them (see [backend/flexmaster/celery.py](backend/flexmaster/celery.py)) — replacing what used to be a bespoke sleep-until-target-time loop (`backend/scheduler.py`, now removed) with Celery, the standard tool for this. Render's free tier can't host any of that (no Background Worker or Cron Job for a persistent process), so production instead relies on a free [GitHub Actions scheduled workflow](.github/workflows/deadline-digest-cron.yml) that POSTs to a token-protected endpoint (`/api/internal/send-deadline-digest/`, guarded by `DIGEST_CRON_TOKEN`) once a day. Net effect: the digest goes out daily either way, just triggered by a different scheduler depending on environment.
 
 ---
 
@@ -298,13 +299,16 @@ Docker ensures a consistent development environment and simplifies dependency ma
 
 Frontend and backend were originally two separate Render services, on two separate `*.onrender.com` subdomains — which turned out to be two separate *sites* as far as browsers are concerned, making every frontend→API request a third-party-cookie situation that got silently blocked despite a correctly-formed `Set-Cookie` header. Rather than chase cookie-attribute workarounds, the fix was architectural: build the frontend into the same Docker image and let Django serve it directly (WhiteNoise + a SPA-fallback route), so there's only one origin and the problem doesn't exist in the first place. See [Deployment](#deployment).
 
+### Broker-Backed Scheduling (Celery + Redis) Over a Bespoke Loop
+
+The deadline-digest job used to be `backend/scheduler.py`: a plain Python script that slept until a target UTC hour and ran the digest command directly, once a day, forever, as its own long-running process. That works, but it's homegrown infrastructure for a problem the ecosystem already has a standard answer to — no retry semantics, no visibility into what ran or failed, and every *additional* background job this app ever needed would mean writing another loop like it. Replaced with Celery (worker + Beat) and Redis as the broker: the schedule lives in Django settings (`CELERY_BEAT_SCHEDULE`) instead of a hardcoded sleep calculation, Celery Beat ticks the schedule, and a separate worker process executes the job — the standard split, and the one any *next* background job in this app would slot into for free. See [Deployment](#deployment) for why this runs in local dev only, not production.
+
 ---
 
 # Future Improvements
 
 - Goals and Calendar pages (currently placeholders)
 - JWT authentication
-- Asynchronous email processing (Celery) — replacing both `backend/scheduler.py`'s sleep loop and the GitHub Actions cron workaround (see [Deployment](#deployment)) with a proper broker-backed periodic task
 
 ---
 

@@ -10,5 +10,12 @@ db.sqlite3
 *.log
 .DS_Store
 
+# celery beat's local scheduler state (docker-compose.yml's celery_beat
+# service, or `celery -A flexmaster beat` run bare) — written to
+# wherever it's run from (backend/), a runtime artifact, not app code.
+celerybeat-schedule
+celerybeat-schedule.db
+celerybeat.pid
+
 # graphify tool output — analysis cache, not app code
 graphify-out/

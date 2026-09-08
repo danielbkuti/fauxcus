@@ -24,3 +24,5 @@ coverage
 gunicorn
 dj-database-url
 whitenoise
+celery
+redis
