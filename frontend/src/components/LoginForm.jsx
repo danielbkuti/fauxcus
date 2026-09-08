@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom'
 import { Eye, EyeOff } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Logo } from '@/components/Logo'
 import { login } from '@/lib/auth'
 import { cn } from '@/lib/utils'
@@ -17,6 +18,10 @@ export function LoginForm({ onLoginSuccess }) {
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState(null)
   const [submitting, setSubmitting] = useState(false)
+  // Off by default — the backend's own default is a session that ends
+  // when the browser closes (see settings.SESSION_EXPIRE_AT_BROWSER_CLOSE);
+  // checking this is what opts into a persistent, 2-week login instead.
+  const [rememberMe, setRememberMe] = useState(false)
   // Tracks which field currently has focus ('username' | 'password' | null)
   // so we can highlight that field's label + input together while it's
   // being typed in.
@@ -28,7 +33,7 @@ export function LoginForm({ onLoginSuccess }) {
     setSubmitting(true)
 
     try {
-      const data = await login(username, password)
+      const data = await login(username, password, rememberMe)
       onLoginSuccess(data)
     } catch (err) {
       // Our login_api view puts form errors under err.data.errors.__all__.
@@ -129,12 +134,21 @@ export function LoginForm({ onLoginSuccess }) {
             </div>
           </div>
 
-          <Link
-            to="/forgot-password"
-            className="self-end text-xs font-medium text-sky-600 hover:underline"
-          >
-            Forgot password?
-          </Link>
+          <div className="flex items-center justify-between">
+            <label className="flex items-center gap-2 text-xs font-medium text-black/70">
+              <Checkbox
+                checked={rememberMe}
+                onCheckedChange={(value) => setRememberMe(value === true)}
+              />
+              Remember me
+            </label>
+            <Link
+              to="/forgot-password"
+              className="text-xs font-medium text-sky-600 hover:underline"
+            >
+              Forgot password?
+            </Link>
+          </div>
 
           {/* 5. Error directly under the fields, small + red */}
           {error && <p className="text-xs text-destructive">{error}</p>}

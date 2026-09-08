@@ -63,6 +63,21 @@ CSRF_COOKIE_SAMESITE = "Lax" if DEBUG else "None"
 CSRF_COOKIE_SECURE = not DEBUG
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
+# Baseline: no persistent login cookie unless something explicitly asks
+# for one. Without this, Django's default is a session that survives
+# closing the browser entirely (governed by SESSION_COOKIE_AGE below,
+# 2 weeks out of the box) for *every* login, with no way to opt out —
+# too long a window to leave logged in by default on, say, a shared
+# computer. user.api_views.login_api is the one place that opts back
+# in (via request.session.set_expiry(SESSION_COOKIE_AGE)) when its
+# "remember me" checkbox was checked; every other place a session gets
+# established (signup, password reset) just inherits this same
+# session-ends-at-browser-close default.
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True
+# How long "remember me" actually remembers — only takes effect where
+# login_api explicitly opts in above; Django's own default (2 weeks).
+SESSION_COOKIE_AGE = 1209600
+
 # Application definition
 
 INSTALLED_APPS = [
