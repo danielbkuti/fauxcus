@@ -1,0 +1,33 @@
+name: Deadline digest cron
+
+# Runs the daily deadline-digest email in production. Render's free
+# tier has no Worker/Cron Job to run backend/scheduler.py's loop there
+# (see render.yaml's own comments), so this workflow is what actually
+# triggers it live — hitting a protected endpoint
+# (tasks.api.views.TriggerDeadlineDigestView) once a day instead.
+# backend/scheduler.py keeps running as-is for local dev only
+# (docker-compose.yml's `scheduler` service).
+
+on:
+  schedule:
+    # 13:00 UTC daily — matches backend/scheduler.py's default
+    # DIGEST_HOUR_UTC, just so local dev and prod agree on "when".
+    - cron: "0 13 * * *"
+  workflow_dispatch: {}
+
+jobs:
+  trigger-digest:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger deadline digest
+        run: |
+          curl --fail --show-error --silent \
+            --max-time 120 \
+            --retry 2 --retry-delay 10 \
+            -X POST \
+            -H "Authorization: Bearer ${{ secrets.DIGEST_CRON_TOKEN }}" \
+            https://fauxcus-api.onrender.com/api/internal/send-deadline-digest/
+        # --max-time 120: Render's free plan spins the service down
+        # after 15 minutes idle, so the first request of the day may
+        # need up to ~a minute just to wake it back up before it can
+        # even respond.

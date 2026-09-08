@@ -75,7 +75,9 @@ Render (single Docker service, Dockerfile.render)
 
 This isn't just a smaller footprint — it fixes a real bug the two-service split had. `*.onrender.com` subdomains count as separate sites for cookie purposes (the same reason `*.vercel.app`/`*.github.io` work this way), so a frontend on one subdomain calling an API on another was a third-party-cookie request, and browsers increasingly block those by default: login worked with a correctly-formed `Set-Cookie` header and still failed, because the cookie never actually got stored. Folding the frontend into the same Django process makes every request same-origin, which makes the whole problem disappear rather than needing cookie-attribute workarounds. See the comments in [render.yaml](render.yaml) for the full writeup.
 
-A few more differences from local dev, all driven by staying on Render's free tier: [render-start.sh](render-start.sh) runs migrations on every boot instead of as a separate step (no Shell access to run one-off commands), the database is [Neon](https://neon.tech) (free forever) rather than a Render-managed Postgres instance (which expires 30 days after creation), and the deadline-reminder scheduler (`docker-compose.yml`'s `scheduler` service) isn't deployed at all — Render has no free tier for either a Background Worker or a Cron Job. It still runs daily in local dev; on the live demo, only the in-app side of a notification would ever appear, and only if something else created it.
+A few more differences from local dev, all driven by staying on Render's free tier: [render-start.sh](render-start.sh) runs migrations on every boot instead of as a separate step (no Shell access to run one-off commands), and the database is [Neon](https://neon.tech) (free forever) rather than a Render-managed Postgres instance (which expires 30 days after creation).
+
+The deadline-digest scheduler is also handled differently in production than in local dev, though it does run in both. Locally, `docker-compose.yml`'s `scheduler` service runs [backend/scheduler.py](backend/scheduler.py) — a plain sleep-until-target-time loop that calls `manage.py send_deadline_digest` once a day. Render's free tier has no Background Worker or Cron Job to run that same loop live, so production instead relies on a free [GitHub Actions scheduled workflow](.github/workflows/deadline-digest-cron.yml) that POSTs to a token-protected endpoint (`/api/internal/send-deadline-digest/`, guarded by `DIGEST_CRON_TOKEN`) once a day, which runs the same management command server-side. Net effect: the digest goes out daily either way, just triggered by a different scheduler depending on environment.
 
 ---
 
@@ -88,7 +90,7 @@ A few more differences from local dev, all driven by staying on Render's free ti
 - Task detail page: a four-state color theme (on-track / due-soon / overdue / completed) driving the whole page's palette, a progress dial, an activity log, and celebration animations (confetti, fireworks) on completion
 - Deadline editor: a portal-based wheel picker (day/month/year, optional time-of-day), shared across every place a deadline gets set
 - Progress page: a full-bleed stats band (completion rate, streaks, a 7-day sparkline, a 30/90/all-time period toggle) over a chart section — weekly created-vs-closed bars, a status breakdown, a GitHub-style daily-activity heatmap doubling as a streak visual, and day-of-week/time-of-day distributions — plus a searchable archive of everything completed
-- In-app notifications: a bell with an unread badge for tasks/subtasks due soon, backed by a daily email digest (local dev only — see [Deployment](#deployment))
+- In-app notifications: a bell with an unread badge for tasks/subtasks due soon, backed by a daily email digest (see [Deployment](#deployment) for how the digest actually runs in production vs. local dev)
 
 ### Authentication
 - Custom user model
@@ -302,8 +304,7 @@ Frontend and backend were originally two separate Render services, on two separa
 
 - Goals and Calendar pages (currently placeholders)
 - JWT authentication
-- Asynchronous email processing (Celery)
-- Run the deadline-reminder scheduler in production (currently local-dev-only — Render's free tier has no Background Worker or Cron Job; see [Deployment](#deployment))
+- Asynchronous email processing (Celery) — replacing both `backend/scheduler.py`'s sleep loop and the GitHub Actions cron workaround (see [Deployment](#deployment)) with a proper broker-backed periodic task
 
 ---
 

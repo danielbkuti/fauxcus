@@ -37,13 +37,20 @@
 #     settings.py already accepts DATABASE_URL directly via
 #     dj-database-url, so this needs zero code changes.
 #   - The scheduler (backend/scheduler.py's daily deadline-digest
-#     email). Render has no free tier for either a Worker (bills 24/7
-#     regardless of plan) or a Cron Job ($1/month minimum) — dropped
-#     here so the whole deployment stays genuinely free. Add it back
-#     later as a `type: cron` service (schedule: "0 13 * * *",
+#     email) as a *Render* service. Render has no free tier for either
+#     a Worker (bills 24/7 regardless of plan) or a Cron Job ($1/month
+#     minimum), so it isn't defined here as a `type: cron` service. The
+#     digest still runs daily in production, though — for $0 — via a
+#     GitHub Actions `schedule:` workflow
+#     (.github/workflows/deadline-digest-cron.yml) that POSTs to the
+#     DIGEST_CRON_TOKEN-protected /api/internal/send-deadline-digest/
+#     endpoint below once a day. backend/scheduler.py itself keeps
+#     running only in local dev (docker-compose.yml's `scheduler`
+#     service). If a Render-native cron is ever preferred instead, add
+#     it as a `type: cron` service (schedule: "0 13 * * *",
 #     dockerCommand: python backend/manage.py send_deadline_digest,
-#     same dockerfilePath/dockerContext as below) whenever the daily
-#     reminder email is worth a dollar a month to you.
+#     same dockerfilePath/dockerContext as below) and drop the GitHub
+#     Actions workflow.
 #
 # Migrations run automatically instead of needing a manual step: Shell
 # access and the "Pre-Deploy Command" feature are both paid-only on
@@ -86,6 +93,13 @@ services:
       - key: EMAIL_HOST_USER
         sync: false
       - key: EMAIL_HOST_PASSWORD
+        sync: false
+      # Shared secret for /api/internal/send-deadline-digest/ — must
+      # match the DIGEST_CRON_TOKEN secret on the GitHub Actions
+      # workflow that calls it daily (see the note above and
+      # .github/workflows/deadline-digest-cron.yml). sync: false so
+      # Render prompts for it rather than deploying with it blank.
+      - key: DIGEST_CRON_TOKEN
         sync: false
       # Populates demo@example.com with a realistic task history the
       # first time this runs against a database where that account has
