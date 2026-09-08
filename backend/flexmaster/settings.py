@@ -249,6 +249,16 @@ EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
 # mail as" settings, or switch EMAIL_BACKEND to a transactional provider
 # (SendGrid/Mailgun/SES/etc.) with its own verified sending domain.
 DEFAULT_FROM_EMAIL = 'Fauxcus <pantheraleo440@gmail.com>'
+
+# Shared secret for tasks.api.views.TriggerDeadlineDigestView — lets a
+# free GitHub Actions `schedule:` cron (.github/workflows/deadline-digest-cron.yml)
+# trigger `send_deadline_digest` in production over plain HTTP, since
+# Render's free tier has no Worker/Cron Job to run backend/scheduler.py's
+# loop there (see render.yaml's own comments). Must match the
+# DIGEST_CRON_TOKEN secret set on that workflow. Unset (None/"") locally,
+# which the view treats as "digest-triggering disabled" rather than
+# "any token matches".
+DIGEST_CRON_TOKEN = os.getenv('DIGEST_CRON_TOKEN')
 #
 # ACCOUNT_LOGIN_METHODS = {'email'}
 # ACCOUNT_SIGNUP_FIELDS = ['email*', 'username*', 'password1*', 'password2*']
