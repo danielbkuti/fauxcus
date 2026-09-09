@@ -597,7 +597,7 @@ export function Dashboard({ firstName, username, justLoggedIn, onWelcomeSeen }) 
           accentShadow="rgba(142,197,252,.75)"
           eyebrowIcon={CalendarDays}
           eyebrowLabel="Calendar"
-          meta="Coming soon"
+          meta={now.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
           previewBg="rgba(18,49,75,.09)"
           title="View your calendar"
           buttonLabel="Open"
@@ -639,7 +639,7 @@ export function Dashboard({ firstName, username, justLoggedIn, onWelcomeSeen }) 
                     )
                   )}
                 </div>
-                <span className="text-[11px] font-bold text-[#12314b]/75">Full calendar view — coming soon</span>
+                <span className="text-[11px] font-bold text-[#12314b]/75">Full calendar view →</span>
               </>
             )
           }}

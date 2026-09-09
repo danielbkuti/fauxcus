@@ -16,6 +16,7 @@ import { TaskDetailPage } from '@/components/TaskDetailPage'
 import { ProgressPage } from '@/components/ProgressPage'
 import { ProfilePage } from '@/components/ProfilePage'
 import { ComingSoonPage } from '@/components/ComingSoonPage'
+import { CalendarPage } from '@/components/CalendarPage'
 import { Footer } from '@/components/Footer'
 import { AddTaskFab } from '@/components/AddTaskFab'
 import { TaskStoreProvider } from '@/context/TaskStoreContext'
@@ -248,7 +249,7 @@ function App() {
         <Route path="/tasks/new" element={<NewTaskPage />} />
         <Route path="/tasks/:id" element={<TaskDetailPage />} />
         <Route path="/goals" element={<ComingSoonPage title="Goals" />} />
-        <Route path="/calendar" element={<ComingSoonPage title="Calendar" />} />
+        <Route path="/calendar" element={<CalendarPage />} />
         <Route path="/progress" element={<ProgressPage />} />
         <Route path="/profile" element={<ProfilePage />} />
       </Route>
