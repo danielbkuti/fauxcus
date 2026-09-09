@@ -173,6 +173,14 @@ The same page in two of its four deadline-driven states — in progress (purple,
 /api/tasks/?completed=true
 ```
 
+### Date-Range Filtering Example
+
+Both `/api/tasks/` and `/api/subtasks/` accept a `dateDeadline` range — what a calendar view filters on to fetch "what's due this month" instead of walking the entire list client-side. `dateDeadline` is stored in UTC; convert the viewer's local day/month boundaries to UTC before passing them here rather than relying on a same-day-in-UTC assumption.
+
+```
+/api/tasks/?dateDeadline__gte=2026-09-01T00:00:00Z&dateDeadline__lte=2026-10-01T00:00:00Z
+```
+
 ### Ordering Example
 
 ```

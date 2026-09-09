@@ -239,6 +239,16 @@ class SubTask(models.Model):
     # Same rules and purpose as Task.reminderSentAt above.
     reminderSentAt = models.DateTimeField(null=True, blank=True)
 
+    class Meta:
+        # Same default as Task/Notification. Genuinely load-bearing, not
+        # just cosmetic: without it, a paginated SubTaskViewSet listing
+        # (e.g. the calendar view's own dateDeadline range filter) has
+        # no deterministic order at all — DRF's paginator warns about
+        # exactly this (UnorderedObjectListWarning), and the practical
+        # symptom is results that can shuffle, repeat, or go missing
+        # across pages.
+        ordering = ["-dateCreated"]
+
     def save(self, *args, **kwargs):
         """
         Keeps dateCompleted in sync (see _sync_date_completed), then

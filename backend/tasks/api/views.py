@@ -22,7 +22,23 @@ class TaskViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
     filter_backends = [DjangoFilterBackend, OrderingFilter]
 
-    filterset_fields = ["completed", "status"]
+    # dateDeadline's gte/lte pair is what the calendar view (and
+    # anything else wanting "what's due in this range") filters on —
+    # e.g. ?dateDeadline__gte=2026-09-01T00:00:00Z&dateDeadline__lte=2026-10-01T00:00:00Z
+    # for a month. Deliberately just gte/lte, not an `exact`-day lookup
+    # like dateDeadline__date: dateDeadline is stored in UTC, and
+    # "which calendar day is this due on" is a *local-timezone*
+    # question the caller has to answer, same as every other
+    # deadline-derived thing in this app (formatDeadline, the overdue
+    # gate, etc.) — a raw __date lookup against the stored UTC value
+    # would silently give the wrong day for a chunk of users near
+    # midnight. Compute the local day's start/end as UTC client-side
+    # and pass those as gte/lte instead.
+    filterset_fields = {
+        "completed": ["exact"],
+        "status": ["exact"],
+        "dateDeadline": ["gte", "lte"],
+    }
     ordering_fields = ["dateDeadline", "dateCreated"]
     ordering = ["-dateDeadline"]
 
@@ -45,6 +61,11 @@ class SubTaskViewSet(viewsets.ModelViewSet):
 
     serializer_class = SubTaskSerializer
     permission_classes = [permissions.IsAuthenticated]
+    filter_backends = [DjangoFilterBackend]
+
+    # Same reasoning as TaskViewSet's own dateDeadline filter — see
+    # there for why this is gte/lte only, not an exact-day lookup.
+    filterset_fields = {"dateDeadline": ["gte", "lte"]}
 
     def get_queryset(self):
         return SubTask.objects.filter(

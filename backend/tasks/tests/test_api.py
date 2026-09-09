@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from rest_framework.test import APITestCase
@@ -70,6 +72,36 @@ class TaskAPITestCase(APITestCase):
         response = self.client.get(self.url + "?completed=true")
         self.assertEqual(len(response.data["results"]), 1)
         self.assertTrue(response.data["results"][0]["completed"])
+
+    def test_filtering_date_range(self):
+        """
+        dateDeadline__gte/__lte — what the (future) calendar view filters
+        on to fetch "what's due in this range" instead of the client
+        walking the entire task list itself. A task with no deadline at
+        all must never match a range filter (None isn't "outside every
+        range", it's just not a date to compare).
+        """
+        now = timezone.now()
+        Task.objects.create(
+            user=self.user1, name="In range", status="pending", dateDeadline=now + timedelta(days=2)
+        )
+        Task.objects.create(
+            user=self.user1, name="Out of range", status="pending", dateDeadline=now + timedelta(days=40)
+        )
+        Task.objects.create(user=self.user1, name="No deadline", status="pending")
+
+        self.authenticate(self.user1)
+        response = self.client.get(
+            self.url,
+            {
+                "dateDeadline__gte": now.isoformat(),
+                "dateDeadline__lte": (now + timedelta(days=7)).isoformat(),
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        names = [t["name"] for t in response.data["results"]]
+        self.assertEqual(names, ["In range"])
 
     def test_ordering(self):
         """Ordering by creation date should work."""
@@ -159,3 +191,27 @@ class SubTaskAPITestCase(APITestCase):
 
         self.task1.refresh_from_db()
         self.assertFalse(self.task1.completed)
+
+    def test_filtering_date_range(self):
+        """Same dateDeadline__gte/__lte filtering as TaskViewSet — a
+        subtask's own deadline is a first-class due-date in this app
+        (the overdue gate and the due-date sort both already treat it
+        that way), so the calendar view needs this endpoint filterable
+        the same way, not just the parent task's."""
+        now = timezone.now()
+        SubTask.objects.create(task=self.task1, name="In range", dateDeadline=now + timedelta(days=2))
+        SubTask.objects.create(task=self.task1, name="Out of range", dateDeadline=now + timedelta(days=40))
+        SubTask.objects.create(task=self.task1, name="No deadline")
+
+        self.authenticate(self.user1)
+        response = self.client.get(
+            self.url,
+            {
+                "dateDeadline__gte": now.isoformat(),
+                "dateDeadline__lte": (now + timedelta(days=7)).isoformat(),
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        names = [s["name"] for s in response.data["results"]]
+        self.assertEqual(names, ["In range"])
