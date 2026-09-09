@@ -118,6 +118,7 @@ The deadline-digest scheduler is also handled differently in production than in 
 - PostgreSQL container
 - Environment variable configuration
 - Free production deployment on Render — one Docker service serving both the API and the built frontend, Neon Postgres, zero manual server management (see [Deployment](#deployment))
+- Error monitoring in production (Sentry, free tier) — an unhandled exception is otherwise silent: a 500 for whoever hit it, and no record anywhere. Opt-in via `SENTRY_DSN`; a no-op everywhere that isn't set (local dev, CI)
 
 ### Data Integrity
 - Unique task name per user
@@ -302,6 +303,10 @@ Frontend and backend were originally two separate Render services, on two separa
 ### Broker-Backed Scheduling (Celery + Redis) Over a Bespoke Loop
 
 The deadline-digest job used to be `backend/scheduler.py`: a plain Python script that slept until a target UTC hour and ran the digest command directly, once a day, forever, as its own long-running process. That works, but it's homegrown infrastructure for a problem the ecosystem already has a standard answer to — no retry semantics, no visibility into what ran or failed, and every *additional* background job this app ever needed would mean writing another loop like it. Replaced with Celery (worker + Beat) and Redis as the broker: the schedule lives in Django settings (`CELERY_BEAT_SCHEDULE`) instead of a hardcoded sleep calculation, Celery Beat ticks the schedule, and a separate worker process executes the job — the standard split, and the one any *next* background job in this app would slot into for free. See [Deployment](#deployment) for why this runs in local dev only, not production.
+
+### Error Monitoring (Sentry)
+
+Before this, an unhandled exception in production was invisible — the request just 500s for whoever hit it, and nothing records that it happened at all; finding out meant a user reporting it, if they bothered to. `sentry_sdk.init()` in `settings.py` is gated entirely on `SENTRY_DSN` being set, so it's a genuine no-op everywhere that env var isn't deliberately configured (local dev, CI, this repo's own test suite) — no new behavior, nothing sent, nothing to install or run. `send_default_pii` is explicitly off: only the error itself goes to Sentry, not request/user data, unless that's deliberately turned on later for a specific debugging need.
 
 ---
 

@@ -37,6 +37,37 @@ _render_host = os.getenv("RENDER_EXTERNAL_HOSTNAME")
 if _render_host:
     ALLOWED_HOSTS.append(_render_host)
 
+# --- Error monitoring (Sentry) ---
+# Without this, an unhandled exception in production is silent — it
+# just 500s for whoever hit it, and nobody finds out unless that
+# person happens to report it. Free tier (5k events/month), no cost.
+# Only initializes when SENTRY_DSN is actually set, so this is a no-op
+# everywhere it isn't deliberately configured (local dev, CI, this
+# repo's test suite) — nothing new to install/run, nothing sent
+# anywhere, same as every other env-var-gated optional integration in
+# this file (DIGEST_CRON_TOKEN, CELERY_BROKER_URL).
+SENTRY_DSN = os.getenv("SENTRY_DSN")
+if SENTRY_DSN:
+    import sentry_sdk
+    from sentry_sdk.integrations.django import DjangoIntegration
+
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+        integrations=[DjangoIntegration()],
+        # Performance-trace sampling, separate from error capture (which
+        # is always on) — 10% keeps the free tier's transaction quota
+        # from being eaten by every single request under even modest
+        # traffic, while still surfacing genuinely slow endpoints.
+        traces_sample_rate=0.1,
+        environment="production" if not DEBUG else "development",
+        # Opt-out by default: only the error itself gets sent, not
+        # request/user data (cookies, IPs, form bodies, session
+        # contents) to this third party. Turn on deliberately later if
+        # actually needed for debugging, rather than leaking it by
+        # default from day one.
+        send_default_pii=False,
+    )
+
 # Historical note, not the current deployment: this app used to run as
 # two separate Render services (fauxcus-frontend and fauxcus-api), each
 # on its own onrender.com subdomain — which makes every session/CSRF
