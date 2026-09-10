@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { ChevronLeft, ChevronRight, Plus, Flame, Hammer } from 'lucide-react'
+import { ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Plus, Flame, Hammer } from 'lucide-react'
 import { fetchSubtasksDueBetween, fetchTasksDueBetween, updateSubTask, updateTask } from '@/lib/tasks'
 import { cn, URGENT_WINDOW_MS } from '@/lib/utils'
 import { computeStats } from '@/lib/stats'
@@ -416,19 +416,74 @@ function MonthDayCell({ cell, isToday, isSelected, items, hasAnyItems, nowMs, ca
 // previously-shipped, explicitly-requested feature (click a week number
 // → jump to Week view) kept alongside the new visual design rather than
 // dropped for it.
-function MonthGrid({ grid, todayKey, selectedKey, itemsByDay, nowMs, now, filterState, loading, onSelectDay, onOpenDay, onOpenWeek, onAddDay }) {
+// The small chevron buttons beside the week-number column and the
+// weekday header row — shared styling so the four of them (up, down,
+// left, right) read as one consistent control language.
+function StepButton({ icon: Icon, onClick, label }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={label}
+      title={label}
+      className="flex size-5 items-center justify-center rounded-[6px] text-[#b3afbd] transition-colors hover:bg-white hover:text-[#7c5fb0] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#7c5fb0]"
+    >
+      <Icon className="size-3.5" aria-hidden="true" />
+    </button>
+  )
+}
+
+function MonthGrid({
+  grid,
+  todayKey,
+  selectedKey,
+  itemsByDay,
+  nowMs,
+  now,
+  filterState,
+  loading,
+  onSelectDay,
+  onOpenDay,
+  onOpenWeek,
+  onAddDay,
+  onStepWeek,
+  onPreviousMonth,
+  onNextMonth,
+}) {
   const todayStart = startOfDay(now)
   const weeks = Array.from({ length: grid.length / 7 }, (_, i) => grid.slice(i * 7, i * 7 + 7))
 
   return (
     <div>
-      <div className="mb-2 grid grid-cols-[28px_repeat(7,minmax(0,1fr))] gap-2">
-        <span aria-hidden="true" />
-        {WEEKDAY_SHORT.map((label) => (
-          <span key={label} className="pl-1 text-[11px] font-bold uppercase tracking-[.09em] text-[#a8a5a0]">
-            {label}
-          </span>
-        ))}
+      {/* The week-number column's up/down stepper sits once, here in the
+          header's own leading cell (not repeated per row) — "move the
+          view up/down one week" jumps straight to Week view for the
+          adjacent week, the same destination clicking a row's own week
+          number already jumps to, just relative to whatever's on screen
+          rather than a specific row. The weekday row's left/right
+          stepper lives inside the last (Sunday) cell instead of a 9th
+          grid column, so it can't throw off the day columns' width —
+          those need to line up exactly with the day cells in every row
+          below. */}
+      <div className="mb-2 grid grid-cols-[28px_repeat(7,minmax(0,1fr))] items-center gap-2">
+        <div className="flex flex-col items-center justify-center gap-0.5">
+          <StepButton icon={ChevronUp} onClick={() => onStepWeek(-1)} label="Move the view up one week" />
+          <StepButton icon={ChevronDown} onClick={() => onStepWeek(1)} label="Move the view down one week" />
+        </div>
+        {WEEKDAY_SHORT.map((label, i) => {
+          const isLast = i === WEEKDAY_SHORT.length - 1
+          return (
+            <div key={label} className={cn('flex items-center', isLast ? 'justify-between gap-1' : 'justify-center')}>
+              <span className="text-center text-[11px] font-bold uppercase tracking-[.09em] text-[#a8a5a0]">{label}</span>
+              {isLast && (
+                <div className="flex items-center gap-0.5">
+                  <StepButton icon={ChevronLeft} onClick={onPreviousMonth} label="Previous month" />
+                  <StepButton icon={ChevronRight} onClick={onNextMonth} label="Next month" />
+                </div>
+              )}
+            </div>
+          )
+        })}
       </div>
       <div className="flex flex-col gap-2">
         {weeks.map((week, i) => (
@@ -438,7 +493,7 @@ function MonthGrid({ grid, todayKey, selectedKey, itemsByDay, nowMs, now, filter
               onClick={() => onOpenWeek(week[0].date)}
               title={`Week ${isoWeekNumber(week[0].date)} — view week`}
               aria-label={`View week ${isoWeekNumber(week[0].date)}`}
-              className="mt-2 rounded-[6px] text-[11px] font-bold text-[#b3afbd] transition-colors hover:bg-white hover:text-[#7c5fb0] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#7c5fb0]"
+              className="mt-2 flex h-6 items-center justify-center rounded-[6px] text-[11px] font-bold text-[#b3afbd] transition-colors hover:bg-white hover:text-[#7c5fb0] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#7c5fb0]"
             >
               {isoWeekNumber(week[0].date)}
             </button>
@@ -867,6 +922,15 @@ export function CalendarPage() {
     setViewType('week')
   }
 
+  // The month grid's own week-number stepper (beside its header's
+  // leading cell) — jumps straight to Week view for the week one step
+  // before/after whatever's currently anchored, direction -1 (up) or 1
+  // (down). Same destination as clicking a row's own week number, just
+  // relative to the current anchor instead of a specific row.
+  function stepWeek(direction) {
+    goToWeek(addDays(anchorDate, direction * 7))
+  }
+
   // Opens the FAB's own menu with that day carried along as
   // `prefillDate` — whichever option the FAB menu's own "Add a new
   // task" click leads to (NewTaskPage) reads it back out to seed the
@@ -932,14 +996,21 @@ export function CalendarPage() {
                 )}
               </div>
               <div className="flex items-center gap-1">
-                <button
-                  type="button"
-                  onClick={goToPrevious}
-                  aria-label={`Previous ${viewType}`}
-                  className="flex size-[34px] items-center justify-center rounded-[10px] bg-white/10 text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,.18)] transition-colors hover:bg-white/22 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
-                >
-                  <ChevronLeft className="size-4" />
-                </button>
+                {/* Previous/next are now redundant in Month view — the
+                    grid itself carries the same stepping, right beside
+                    the weekday row (left/right, month) and the week
+                    number column (up/down, week). Week and Day views
+                    have no equivalent of their own, so they keep these. */}
+                {viewType !== 'month' && (
+                  <button
+                    type="button"
+                    onClick={goToPrevious}
+                    aria-label={`Previous ${viewType}`}
+                    className="flex size-[34px] items-center justify-center rounded-[10px] bg-white/10 text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,.18)] transition-colors hover:bg-white/22 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+                  >
+                    <ChevronLeft className="size-4" />
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={() => setAnchorDate(startOfDay(now))}
@@ -947,14 +1018,16 @@ export function CalendarPage() {
                 >
                   Today
                 </button>
-                <button
-                  type="button"
-                  onClick={goToNext}
-                  aria-label={`Next ${viewType}`}
-                  className="flex size-[34px] items-center justify-center rounded-[10px] bg-white/10 text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,.18)] transition-colors hover:bg-white/22 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
-                >
-                  <ChevronRight className="size-4" />
-                </button>
+                {viewType !== 'month' && (
+                  <button
+                    type="button"
+                    onClick={goToNext}
+                    aria-label={`Next ${viewType}`}
+                    className="flex size-[34px] items-center justify-center rounded-[10px] bg-white/10 text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,.18)] transition-colors hover:bg-white/22 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+                  >
+                    <ChevronRight className="size-4" />
+                  </button>
+                )}
               </div>
             </div>
             <div className="flex flex-wrap gap-3.5">
@@ -1032,6 +1105,9 @@ export function CalendarPage() {
                 onOpenDay={goToDay}
                 onOpenWeek={goToWeek}
                 onAddDay={openAddForDay}
+                onStepWeek={stepWeek}
+                onPreviousMonth={goToPrevious}
+                onNextMonth={goToNext}
               />
             ) : viewType === 'week' ? (
               <WeekView
