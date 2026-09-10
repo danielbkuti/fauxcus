@@ -113,7 +113,11 @@ export function AddTaskFab() {
   // Shared with the rest of the authenticated shell (AddTaskFabContext)
   // rather than local state — so a page like CalendarPage's empty-day
   // state can open this same menu itself, not just the button below.
-  const { open, setOpen } = useAddTaskFab()
+  // `prefillDate` is set the same way, by whatever opened the menu with
+  // a specific day already in mind — only the 'task' option below reads
+  // it (see defaultOptions), since /goals and /calendar don't take a
+  // date.
+  const { open, setOpen, prefillDate, setPrefillDate } = useAddTaskFab()
   // Reduced motion drops the whole press-transition's duration to 0 —
   // per fab-motion-handoff.md's own suggested shortcut, rather than
   // special-casing the rotation and ring separately. At 0ms, `rotate`
@@ -152,6 +156,7 @@ export function AddTaskFab() {
     setActiveAction(null)
     setError(null)
     setDescriptionDraftDirty(false)
+    setPrefillDate(null)
   }
 
   // Mutates through the same shared store TaskDetailPage reads from —
@@ -183,7 +188,18 @@ export function AddTaskFab() {
   }
 
   const defaultOptions = [
-    { key: 'task', label: 'Add a new task', icon: SquarePlus, accent: COLOR_TASK, onClick: () => goTo('/tasks/new') },
+    {
+      key: 'task',
+      label: 'Add a new task',
+      icon: SquarePlus,
+      accent: COLOR_TASK,
+      // CalendarPage sets prefillDate before opening the menu when
+      // this was reached by clicking a specific day (an empty cell, or
+      // the rail's "Add task on this day" button) — carries that date
+      // through as a query param so NewTaskPage can seed the deadline
+      // with it instead of the form opening blank.
+      onClick: () => goTo(prefillDate ? `/tasks/new?date=${prefillDate}` : '/tasks/new'),
+    },
     { key: 'goal', label: 'Add a new goal', icon: Target, accent: COLOR_GOAL, onClick: () => goTo('/goals') },
     { key: 'calendar', label: 'Add a calendar item', icon: CalendarDays, accent: COLOR_CALENDAR, onClick: () => goTo('/calendar') },
   ]
