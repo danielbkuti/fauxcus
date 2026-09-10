@@ -8,9 +8,21 @@ import { useTaskStore } from '@/context/TaskStoreContext'
 
 const WEEKDAY_LABELS = ['M', 'T', 'W', 'T', 'F', 'S', 'S']
 
+const VIEW_TYPES = [
+  { key: 'month', label: 'Month' },
+  { key: 'week', label: 'Week' },
+  { key: 'day', label: 'Day' },
+]
+
 function addDays(date, n) {
   const d = new Date(date)
   d.setDate(d.getDate() + n)
+  return d
+}
+
+function startOfDay(date) {
+  const d = new Date(date)
+  d.setHours(0, 0, 0, 0)
   return d
 }
 
@@ -38,6 +50,36 @@ function buildMonthGrid(anchor) {
     const date = addDays(gridStart, i)
     return { date, key: localDayKey(date), inMonth: date.getMonth() === anchor.getMonth() }
   })
+}
+
+// The single Monday-first week containing `anchor` — 7 cells, all
+// "in view" (no adjacent-month dimming the way the month grid has,
+// since a week never spans a partial month the same visual way).
+function buildWeekGrid(anchor) {
+  const dow = (anchor.getDay() + 6) % 7
+  const weekStart = startOfDay(addDays(anchor, -dow))
+  return Array.from({ length: 7 }, (_, i) => {
+    const date = addDays(weekStart, i)
+    return { date, key: localDayKey(date), inMonth: true }
+  })
+}
+
+// The fetch/selection boundary for whatever's currently visible —
+// [start, end), end exclusive — driven by view type + anchor date. The
+// single source of truth both the network fetch and the "is today
+// currently in view" check read from, so a month/week/day switch and a
+// prev/next/Today click always agree on what's actually on screen.
+function computeVisibleRange(viewType, anchorDate) {
+  if (viewType === 'day') {
+    const start = startOfDay(anchorDate)
+    return { start, end: addDays(start, 1) }
+  }
+  if (viewType === 'week') {
+    const cells = buildWeekGrid(anchorDate)
+    return { start: cells[0].date, end: addDays(cells[6].date, 1) }
+  }
+  const cells = buildMonthGrid(anchorDate)
+  return { start: cells[0].date, end: addDays(cells[cells.length - 1].date, 1) }
 }
 
 // Flattens a page of tasks + a page of subtasks (each already
@@ -111,6 +153,28 @@ function dayDotClass(dayItems, now) {
   return 'bg-emerald-500'
 }
 
+// The header label above the grid/day panel — what it says depends on
+// view type: a single day spells itself out in full, a week shows its
+// span (collapsing the month name when both ends share one), a month
+// just names itself.
+function viewLabel(viewType, anchorDate, range) {
+  if (viewType === 'day') {
+    return anchorDate.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
+  }
+  if (viewType === 'week') {
+    // Always spell out month on both ends (Sep 7 – Sep 13, 2026), even
+    // when they match — asking Intl for day+year with month omitted
+    // hits an ICU fallback pattern that renders as literal "(day: 13)"
+    // text instead of a real date, so this deliberately doesn't try to
+    // shorten the common same-month case.
+    const lastDay = addDays(range.end, -1)
+    const startLabel = range.start.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+    const endLabel = lastDay.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
+    return `${startLabel} – ${endLabel}`
+  }
+  return anchorDate.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })
+}
+
 function DueItemRow({ item }) {
   const navigate = useNavigate()
   const { isOverdue, isUrgent, countdownDisplay } = useDeadlineStatus(item.dateDeadline, item.completed)
@@ -157,47 +221,114 @@ function DueItemRow({ item }) {
   )
 }
 
+// Shared day-picker grid — used for both month (42 cells) and week (7
+// cells); which one just depends on the `grid` array passed in. Not
+// used for day view at all, which has nothing to pick between.
+function PickerGrid({ grid, todayKey, selectedKey, itemsByDay, now, onSelect }) {
+  return (
+    <div className="grid grid-cols-7 gap-1.5">
+      {WEEKDAY_LABELS.map((label, i) => (
+        <span key={i} className="pb-1 text-center text-[11px] font-bold text-muted-foreground">
+          {label}
+        </span>
+      ))}
+      {grid.map((cell) => {
+        const isToday = cell.key === todayKey
+        const isSelected = cell.key === selectedKey
+        const dotClass = dayDotClass(itemsByDay.get(cell.key), now)
+        return (
+          <button
+            key={cell.key}
+            type="button"
+            onClick={() => onSelect(cell.key)}
+            className={cn(
+              'flex aspect-square flex-col items-center justify-center gap-1 rounded-[8px] text-xs font-medium transition-colors',
+              !cell.inMonth && 'text-muted-foreground/40',
+              cell.inMonth && !isToday && !isSelected && 'text-foreground hover:bg-accent',
+              isSelected && 'bg-foreground text-background',
+              isToday && !isSelected && 'bg-[#7c5fb0]/15 text-[#6b46a8]'
+            )}
+          >
+            {cell.date.getDate()}
+            <span aria-hidden="true" className={cn('size-1.5 rounded-full', dotClass ?? 'bg-transparent')} />
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+// The "what's due" list — used as the side panel for month/week, and
+// as the main (only) content for day view.
+function DueItemsList({ status, items }) {
+  if (status === 'loading') return <p className="text-sm text-muted-foreground">Loading…</p>
+
+  if (status === 'error') {
+    return <p className="text-sm text-destructive">Couldn&apos;t load the calendar. Try reloading.</p>
+  }
+
+  if (items.length === 0) {
+    return (
+      <div className="flex flex-col items-center gap-2 rounded-[14px] border border-dashed py-10 text-center">
+        <CalendarDays className="size-5 text-muted-foreground" />
+        <p className="text-sm text-muted-foreground">Nothing due this day.</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex flex-col gap-2.5">
+      {items.map((item) => (
+        <DueItemRow key={`${item.kind}-${item.id}`} item={item} />
+      ))}
+    </div>
+  )
+}
+
 export function CalendarPage() {
   const { tasks } = useTaskStore()
   const taskNameById = useMemo(() => new Map(tasks.map((t) => [t.id, t.name])), [tasks])
 
   const now = useMemo(() => new Date(), [])
-  const [anchorMonth, setAnchorMonth] = useState(() => new Date(now.getFullYear(), now.getMonth(), 1))
+  const [viewType, setViewType] = useState('month') // 'month' | 'week' | 'day'
+  const [anchorDate, setAnchorDate] = useState(() => startOfDay(now))
   const [selectedKey, setSelectedKey] = useState(() => localDayKey(now))
   // Raw fetch results, not the grouped-by-day form — grouping also
   // needs taskNameById (a subtask's parent name), which changes
-  // independently of anchorMonth (any task mutation anywhere in the
-  // app updates the shared store). Keeping the two separate means a
-  // store update re-groups the already-fetched data in memory instead
-  // of re-hitting the network for a range that hasn't actually changed.
+  // independently of the visible range (any task mutation anywhere in
+  // the app updates the shared store). Keeping the two separate means
+  // a store update re-groups the already-fetched data in memory
+  // instead of re-hitting the network for a range that hasn't
+  // actually changed.
   const [rawItems, setRawItems] = useState({ tasks: [], subtasks: [] })
   const [status, setStatus] = useState('loading') // 'loading' | 'ready' | 'error'
 
-  const grid = useMemo(() => buildMonthGrid(anchorMonth), [anchorMonth])
+  const range = useMemo(() => computeVisibleRange(viewType, anchorDate), [viewType, anchorDate])
+  const grid = useMemo(() => {
+    if (viewType === 'day') return null
+    return viewType === 'week' ? buildWeekGrid(anchorDate) : buildMonthGrid(anchorDate)
+  }, [viewType, anchorDate])
 
-  // Keeps the selected day in sync with whatever month is actually on
-  // screen — without this, navigating away from the month the current
-  // selection falls in leaves the side panel permanently stuck showing
-  // that stale day (it's simply never in itemsByDay for a different
-  // month, but the header label doesn't know that). Selects today if
-  // today is in the newly-visible month, otherwise the 1st of it —
-  // same convention most calendar UIs use rather than leaving nothing
-  // selected.
+  // Keeps the selected day in sync with whatever range is actually on
+  // screen — without this, switching view type or navigating away from
+  // the range the current selection falls in leaves the side panel
+  // permanently stuck showing a stale, now out-of-range day. Selects
+  // today if today's within the new range, otherwise the range's own
+  // first day — same convention most calendar UIs use rather than
+  // leaving nothing selected. For day view this trivially always picks
+  // that one visible day, since the range only ever spans it.
   useEffect(() => {
-    const todayInView = now.getFullYear() === anchorMonth.getFullYear() && now.getMonth() === anchorMonth.getMonth()
-    setSelectedKey(todayInView ? localDayKey(now) : localDayKey(anchorMonth))
-  }, [anchorMonth, now])
+    const todayInRange = now >= range.start && now < range.end
+    setSelectedKey(todayInRange ? localDayKey(now) : localDayKey(range.start))
+  }, [range, now])
 
   useEffect(() => {
     let cancelled = false
     setStatus('loading')
 
-    const gridStart = grid[0].date
-    const gridEnd = addDays(grid[grid.length - 1].date, 1) // exclusive end -> end of last cell's day
-
     Promise.all([
-      fetchTasksDueBetween(gridStart.toISOString(), gridEnd.toISOString()),
-      fetchSubtasksDueBetween(gridStart.toISOString(), gridEnd.toISOString()),
+      fetchTasksDueBetween(range.start.toISOString(), range.end.toISOString()),
+      fetchSubtasksDueBetween(range.start.toISOString(), range.end.toISOString()),
     ])
       .then(([tasksData, subtasksData]) => {
         if (cancelled) return
@@ -212,10 +343,7 @@ export function CalendarPage() {
     return () => {
       cancelled = true
     }
-    // grid is derived from anchorMonth alone — depending on it directly
-    // would re-fetch on every render for no reason.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [anchorMonth])
+  }, [range])
 
   const itemsByDay = useMemo(
     () => groupByDay(flattenItems(rawItems.tasks, rawItems.subtasks, taskNameById)),
@@ -224,113 +352,110 @@ export function CalendarPage() {
 
   const todayKey = localDayKey(now)
   const selectedItems = itemsByDay.get(selectedKey) ?? []
-  const selectedDate = grid.find((c) => c.key === selectedKey)?.date ?? now
 
-  function goToMonth(delta) {
-    setAnchorMonth((current) => new Date(current.getFullYear(), current.getMonth() + delta, 1))
+  function goToPrevious() {
+    setAnchorDate((current) => {
+      if (viewType === 'day') return addDays(current, -1)
+      if (viewType === 'week') return addDays(current, -7)
+      return new Date(current.getFullYear(), current.getMonth() - 1, 1)
+    })
+  }
+
+  function goToNext() {
+    setAnchorDate((current) => {
+      if (viewType === 'day') return addDays(current, 1)
+      if (viewType === 'week') return addDays(current, 7)
+      return new Date(current.getFullYear(), current.getMonth() + 1, 1)
+    })
   }
 
   return (
     <div className="mx-auto max-w-5xl px-8 py-8">
-      <h1 className="mb-4 text-2xl font-semibold tracking-tight">Calendar</h1>
-
-      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[1fr_336px]">
-        {/* ---- month grid ---- */}
-        <div className="relative rounded-[14px] bg-card p-5 ring-1 ring-foreground/10">
-          <span aria-hidden="true" className="task-ring" />
-          <div className="mb-4 flex items-center justify-between">
-            <span className="text-sm font-semibold tracking-tight">
-              {anchorMonth.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}
-            </span>
-            <div className="flex items-center gap-1">
-              <button
-                type="button"
-                onClick={() => goToMonth(-1)}
-                aria-label="Previous month"
-                className="flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-              >
-                <ChevronLeft className="size-4" />
-              </button>
-              <button
-                type="button"
-                onClick={() => setAnchorMonth(new Date(now.getFullYear(), now.getMonth(), 1))}
-                className="rounded-md px-2 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-              >
-                Today
-              </button>
-              <button
-                type="button"
-                onClick={() => goToMonth(1)}
-                aria-label="Next month"
-                className="flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-              >
-                <ChevronRight className="size-4" />
-              </button>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-7 gap-1.5">
-            {WEEKDAY_LABELS.map((label, i) => (
-              <span key={i} className="pb-1 text-center text-[11px] font-bold text-muted-foreground">
-                {label}
-              </span>
-            ))}
-            {grid.map((cell) => {
-              const isToday = cell.key === todayKey
-              const isSelected = cell.key === selectedKey
-              const dotClass = dayDotClass(itemsByDay.get(cell.key), now)
-              return (
-                <button
-                  key={cell.key}
-                  type="button"
-                  onClick={() => setSelectedKey(cell.key)}
-                  className={cn(
-                    'flex aspect-square flex-col items-center justify-center gap-1 rounded-[8px] text-xs font-medium transition-colors',
-                    !cell.inMonth && 'text-muted-foreground/40',
-                    cell.inMonth && !isToday && !isSelected && 'text-foreground hover:bg-accent',
-                    isSelected && 'bg-foreground text-background',
-                    isToday && !isSelected && 'bg-[#7c5fb0]/15 text-[#6b46a8]'
-                  )}
-                >
-                  {cell.date.getDate()}
-                  <span
-                    aria-hidden="true"
-                    className={cn('size-1.5 rounded-full', dotClass ?? 'bg-transparent')}
-                  />
-                </button>
-              )
-            })}
-          </div>
-        </div>
-
-        {/* ---- selected day's due items ---- */}
-        <div className="flex flex-col gap-3.5">
-          <h2 className="m-0 font-display text-[15px] font-semibold tracking-[.02em] text-foreground">
-            {selectedDate.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
-          </h2>
-
-          {status === 'loading' && <p className="text-sm text-muted-foreground">Loading…</p>}
-
-          {status === 'error' && (
-            <p className="text-sm text-destructive">Couldn&apos;t load the calendar. Try reloading.</p>
-          )}
-
-          {status === 'ready' && selectedItems.length === 0 && (
-            <div className="flex flex-col items-center gap-2 rounded-[14px] border border-dashed py-10 text-center">
-              <CalendarDays className="size-5 text-muted-foreground" />
-              <p className="text-sm text-muted-foreground">Nothing due this day.</p>
-            </div>
-          )}
-
-          {status === 'ready' && selectedItems.length > 0 && (
-            <div className="flex flex-col gap-2.5">
-              {selectedItems.map((item) => (
-                <DueItemRow key={`${item.kind}-${item.id}`} item={item} />
-              ))}
-            </div>
-          )}
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-2xl font-semibold tracking-tight">Calendar</h1>
+        <div role="tablist" aria-label="Calendar view" className="flex gap-1 rounded-full bg-muted p-1">
+          {VIEW_TYPES.map((v) => (
+            <button
+              key={v.key}
+              type="button"
+              role="tab"
+              aria-selected={viewType === v.key}
+              onClick={() => setViewType(v.key)}
+              className={cn(
+                'rounded-full px-3 py-1 text-xs font-medium transition-colors',
+                viewType === v.key
+                  ? 'bg-foreground text-background'
+                  : 'text-muted-foreground hover:text-foreground'
+              )}
+            >
+              {v.label}
+            </button>
+          ))}
         </div>
       </div>
+
+      {/* ---- nav row: shared by every view type ---- */}
+      <div className="relative mb-4 flex items-center justify-between rounded-[14px] bg-card p-4 ring-1 ring-foreground/10">
+        <span aria-hidden="true" className="task-ring" />
+        <span className="text-sm font-semibold tracking-tight">{viewLabel(viewType, anchorDate, range)}</span>
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={goToPrevious}
+            aria-label={`Previous ${viewType}`}
+            className="flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+          >
+            <ChevronLeft className="size-4" />
+          </button>
+          <button
+            type="button"
+            onClick={() => setAnchorDate(startOfDay(now))}
+            className="rounded-md px-2 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+          >
+            Today
+          </button>
+          <button
+            type="button"
+            onClick={goToNext}
+            aria-label={`Next ${viewType}`}
+            className="flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+          >
+            <ChevronRight className="size-4" />
+          </button>
+        </div>
+      </div>
+
+      {viewType === 'day' ? (
+        // Nothing to pick between — the range is exactly the one
+        // visible day, so its item list is the main content, not a
+        // side panel next to a picker.
+        <DueItemsList status={status} items={selectedItems} />
+      ) : (
+        <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[1fr_336px]">
+          <div className="relative rounded-[14px] bg-card p-5 ring-1 ring-foreground/10">
+            <span aria-hidden="true" className="task-ring" />
+            <PickerGrid
+              grid={grid}
+              todayKey={todayKey}
+              selectedKey={selectedKey}
+              itemsByDay={itemsByDay}
+              now={now}
+              onSelect={setSelectedKey}
+            />
+          </div>
+
+          <div className="flex flex-col gap-3.5">
+            <h2 className="m-0 font-display text-[15px] font-semibold tracking-[.02em] text-foreground">
+              {(grid.find((c) => c.key === selectedKey)?.date ?? now).toLocaleDateString(undefined, {
+                weekday: 'long',
+                month: 'long',
+                day: 'numeric',
+              })}
+            </h2>
+            <DueItemsList status={status} items={selectedItems} />
+          </div>
+        </div>
+      )}
     </div>
   )
 }
