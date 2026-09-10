@@ -316,11 +316,17 @@ The deadline-digest job used to be `backend/scheduler.py`: a plain Python script
 
 Before this, an unhandled exception in production was invisible — the request just 500s for whoever hit it, and nothing records that it happened at all; finding out meant a user reporting it, if they bothered to. `sentry_sdk.init()` in `settings.py` is gated entirely on `SENTRY_DSN` being set, so it's a genuine no-op everywhere that env var isn't deliberately configured (local dev, CI, this repo's own test suite) — no new behavior, nothing sent, nothing to install or run. `send_default_pii` is explicitly off: only the error itself goes to Sentry, not request/user data, unless that's deliberately turned on later for a specific debugging need.
 
+### Skeleton Loaders for Async Page Content
+
+Every page whose content depends on an async fetch (Dashboard, Tasks, a task's detail page, Progress, Profile, Calendar) renders a skeleton — a pulsing placeholder shaped roughly like the real content — while that fetch is in flight, rather than a bare "Loading…" string or, worse, nothing (a `status === 'loading'` view that just renders as an empty section reads as "you have nothing here yet," not "this hasn't loaded"). `frontend/src/components/ui/skeleton.jsx` exports the one shared `Skeleton` primitive this is built from — a pulsing block, reshaped per call site via `className` (and an optional `style` for the rare case where the tint itself has to be a runtime value, like a per-task-state theme color, rather than a static Tailwind class).
+
+**This is a required pattern for any new page or view added to this app going forward** — a `status === 'loading'` branch that returns plain text or nothing is a regression, not a stopgap to clean up later.
+
 ---
 
 # Future Improvements
 
-- Goals and Calendar pages (currently placeholders)
+- Goals page (currently a placeholder)
 - JWT authentication
 
 ---

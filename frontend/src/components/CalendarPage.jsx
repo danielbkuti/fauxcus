@@ -6,6 +6,7 @@ import { cn, URGENT_WINDOW_MS } from '@/lib/utils'
 import { computeStats } from '@/lib/stats'
 import { useTaskStore } from '@/context/TaskStoreContext'
 import { useAddTaskFab } from '@/context/AddTaskFabContext'
+import { Skeleton } from '@/components/ui/skeleton'
 
 // Rebuilt per design_handoff_calendar_page/README.md ("Glass", direction
 // 1a) — rounded white day cards on a lilac-grey ground, colored deadline
@@ -263,16 +264,6 @@ function useClock() {
     return () => clearInterval(id)
   }, [])
   return now
-}
-
-// A plain pulsing bar — the one shape every skeleton in this file is
-// built from, just resized/reshaped per call site via className
-// (rounded-full for a pill, a smaller radius for a row). Neutral tone
-// (#33224a/10) reads against the page's own white cards; the hero's own
-// skeletons override it to a white tint (see StatCard) since they sit
-// on the dark starfield background instead.
-function Skeleton({ className }) {
-  return <span aria-hidden="true" className={cn('block animate-pulse rounded-full bg-[#33224a]/10', className)} />
 }
 
 function StatCard({ value, label, flame, loading }) {

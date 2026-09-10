@@ -5,6 +5,7 @@ import { useTaskStore } from '@/context/TaskStoreContext'
 import { formatDeadline } from '@/lib/utils'
 import { computeStats, computePeriodStats, formatDuration, formatPercent } from '@/lib/stats'
 import { TaskSearch } from '@/components/TaskSearch'
+import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
 
 // Rebuilt from design_handoff_progress_page/README.md — replaces the
@@ -756,9 +757,33 @@ export function ProgressPage() {
   )
 
   if (status === 'loading') {
+    // Mirrors the real page's two bands — the dark stats gradient up
+    // top, the light chart/archive section below — so loading doesn't
+    // just look like an empty white page before the two sections'
+    // very different backgrounds paint in.
     return (
-      <div className="mx-auto max-w-3xl px-8 py-8">
-        <p className="text-sm text-muted-foreground">Loading…</p>
+      <div>
+        <section className="text-white" style={{ background: 'linear-gradient(170deg,#3b2856,#33224a 55%,#271a3a)' }}>
+          <div className="mx-auto grid max-w-[1180px] grid-cols-1 gap-14 px-6 py-16 sm:px-10 lg:grid-cols-[440px_1fr] lg:items-start lg:gap-16 lg:py-[84px]">
+            <div className="flex flex-col gap-5">
+              <Skeleton className="h-3 w-20 rounded-full bg-white/20" />
+              <Skeleton className="h-10 w-full max-w-[16ch] rounded-2xl bg-white/15" />
+              <div className="mt-2 flex flex-col gap-3">
+                {[0, 1, 2, 3].map((i) => (
+                  <Skeleton key={i} className="h-4 w-full rounded-full bg-white/10" />
+                ))}
+              </div>
+            </div>
+            <Skeleton className="h-[160px] w-full rounded-2xl bg-white/10" />
+          </div>
+        </section>
+        <section style={{ background: '#f0eee9' }} className="mx-auto max-w-[1180px] px-6 pt-16 pb-[104px] sm:px-10 sm:pt-[88px]">
+          <Skeleton className="h-9 w-64 max-w-full rounded-2xl" />
+          <div className="mt-8 grid grid-cols-1 gap-5 lg:grid-cols-2">
+            <Skeleton className="h-[220px] w-full rounded-2xl" />
+            <Skeleton className="h-[220px] w-full rounded-2xl" />
+          </div>
+        </section>
       </div>
     )
   }
