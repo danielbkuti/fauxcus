@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { Fragment, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react'
 import { fetchSubtasksDueBetween, fetchTasksDueBetween } from '@/lib/tasks'
@@ -35,6 +35,21 @@ function startOfDay(date) {
 // actually falls on.
 function localDayKey(date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+}
+
+// ISO-8601 week number (Monday-start weeks; week 1 is whichever week
+// contains the year's first Thursday) — the same numbering Outlook/
+// Google Calendar's own "week number" column uses, so "week 37" here
+// means what a viewer already expects it to, not a different scheme
+// invented for this app.
+function isoWeekNumber(date) {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()))
+  const dayNum = (d.getUTCDay() + 6) % 7 // Mon=0 ... Sun=6
+  d.setUTCDate(d.getUTCDate() - dayNum + 3) // nearest Thursday
+  const firstThursday = new Date(Date.UTC(d.getUTCFullYear(), 0, 4))
+  const firstThursdayDayNum = (firstThursday.getUTCDay() + 6) % 7
+  firstThursday.setUTCDate(firstThursday.getUTCDate() - firstThursdayDayNum + 3)
+  return 1 + Math.round((d - firstThursday) / (7 * 24 * 60 * 60 * 1000))
 }
 
 // Builds the 6-row, Monday-first grid for the month containing
@@ -221,39 +236,77 @@ function DueItemRow({ item }) {
   )
 }
 
-// Shared day-picker grid — used for both month (42 cells) and week (7
-// cells); which one just depends on the `grid` array passed in. Not
-// used for day view at all, which has nothing to pick between.
-function PickerGrid({ grid, todayKey, selectedKey, itemsByDay, now, onSelect }) {
+// One day cell — a single-click selects it (side panel updates in
+// place), a double-click jumps straight to Day view for it. Shared by
+// both the month and week grids below.
+function DayCell({ cell, isToday, isSelected, dotClass, onSelect, onOpen }) {
   return (
-    <div className="grid grid-cols-7 gap-1.5">
+    <button
+      type="button"
+      onClick={() => onSelect(cell.key)}
+      onDoubleClick={() => onOpen(cell.date)}
+      className={cn(
+        'flex aspect-square flex-col items-center justify-center gap-1 rounded-[8px] text-xs font-medium transition-colors',
+        !cell.inMonth && 'text-muted-foreground/40',
+        cell.inMonth && !isToday && !isSelected && 'text-foreground hover:bg-accent',
+        isSelected && 'bg-foreground text-background',
+        isToday && !isSelected && 'bg-[#7c5fb0]/15 text-[#6b46a8]'
+      )}
+    >
+      {cell.date.getDate()}
+      <span aria-hidden="true" className={cn('size-1.5 rounded-full', dotClass ?? 'bg-transparent')} />
+    </button>
+  )
+}
+
+// Shared day-picker grid — used for both month (42 cells, one row per
+// ISO week) and week (7 cells); which one just depends on the `grid`
+// array passed in. Not used for day view at all, which has nothing to
+// pick between.
+//
+// Month view also gets a leading week-number column, one per row —
+// clicking a week number jumps straight to Week view for that row's
+// week, a faster path than switching tabs and re-navigating to find
+// it. Week view doesn't repeat this (`showWeekNumbers` false there):
+// a single visible week showing its own number back at you is just
+// noise, not a shortcut to anything.
+function PickerGrid({ grid, todayKey, selectedKey, itemsByDay, now, onSelect, onDayOpen, showWeekNumbers, onWeekOpen }) {
+  const weeks = showWeekNumbers ? Array.from({ length: grid.length / 7 }, (_, i) => grid.slice(i * 7, i * 7 + 7)) : [grid]
+
+  return (
+    <div className={cn('grid gap-1.5', showWeekNumbers ? 'grid-cols-[28px_repeat(7,1fr)]' : 'grid-cols-7')}>
+      {showWeekNumbers && <span aria-hidden="true" />}
       {WEEKDAY_LABELS.map((label, i) => (
         <span key={i} className="pb-1 text-center text-[11px] font-bold text-muted-foreground">
           {label}
         </span>
       ))}
-      {grid.map((cell) => {
-        const isToday = cell.key === todayKey
-        const isSelected = cell.key === selectedKey
-        const dotClass = dayDotClass(itemsByDay.get(cell.key), now)
-        return (
-          <button
-            key={cell.key}
-            type="button"
-            onClick={() => onSelect(cell.key)}
-            className={cn(
-              'flex aspect-square flex-col items-center justify-center gap-1 rounded-[8px] text-xs font-medium transition-colors',
-              !cell.inMonth && 'text-muted-foreground/40',
-              cell.inMonth && !isToday && !isSelected && 'text-foreground hover:bg-accent',
-              isSelected && 'bg-foreground text-background',
-              isToday && !isSelected && 'bg-[#7c5fb0]/15 text-[#6b46a8]'
-            )}
-          >
-            {cell.date.getDate()}
-            <span aria-hidden="true" className={cn('size-1.5 rounded-full', dotClass ?? 'bg-transparent')} />
-          </button>
-        )
-      })}
+      {weeks.map((week, rowIndex) => (
+        <Fragment key={rowIndex}>
+          {showWeekNumbers && (
+            <button
+              type="button"
+              onClick={() => onWeekOpen(week[0].date)}
+              title={`Week ${isoWeekNumber(week[0].date)} — view week`}
+              aria-label={`View week ${isoWeekNumber(week[0].date)}`}
+              className="rounded-[6px] text-[10px] font-semibold text-muted-foreground/70 transition-colors hover:bg-accent hover:text-foreground"
+            >
+              {isoWeekNumber(week[0].date)}
+            </button>
+          )}
+          {week.map((cell) => (
+            <DayCell
+              key={cell.key}
+              cell={cell}
+              isToday={cell.key === todayKey}
+              isSelected={cell.key === selectedKey}
+              dotClass={dayDotClass(itemsByDay.get(cell.key), now)}
+              onSelect={onSelect}
+              onOpen={onDayOpen}
+            />
+          ))}
+        </Fragment>
+      ))}
     </div>
   )
 }
@@ -369,6 +422,21 @@ export function CalendarPage() {
     })
   }
 
+  // Double-clicking a day (month or week grid) jumps straight to Day
+  // view for it; clicking a week number (month grid only) jumps to
+  // Week view for that week. Both just move the same anchorDate/
+  // viewType state everything else already reacts to — no separate
+  // fetch/selection wiring needed for either.
+  function goToDay(date) {
+    setAnchorDate(startOfDay(date))
+    setViewType('day')
+  }
+
+  function goToWeek(date) {
+    setAnchorDate(startOfDay(date))
+    setViewType('week')
+  }
+
   return (
     <div className="mx-auto max-w-5xl px-8 py-8">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
@@ -441,6 +509,9 @@ export function CalendarPage() {
               itemsByDay={itemsByDay}
               now={now}
               onSelect={setSelectedKey}
+              onDayOpen={goToDay}
+              showWeekNumbers={viewType === 'month'}
+              onWeekOpen={goToWeek}
             />
           </div>
 
