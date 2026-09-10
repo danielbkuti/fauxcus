@@ -265,13 +265,27 @@ function useClock() {
   return now
 }
 
-function StatCard({ value, label, flame }) {
+// A plain pulsing bar — the one shape every skeleton in this file is
+// built from, just resized/reshaped per call site via className
+// (rounded-full for a pill, a smaller radius for a row). Neutral tone
+// (#33224a/10) reads against the page's own white cards; the hero's own
+// skeletons override it to a white tint (see StatCard) since they sit
+// on the dark starfield background instead.
+function Skeleton({ className }) {
+  return <span aria-hidden="true" className={cn('block animate-pulse rounded-full bg-[#33224a]/10', className)} />
+}
+
+function StatCard({ value, label, flame, loading }) {
   return (
     <div className="flex min-w-[120px] flex-1 flex-col gap-[3px] rounded-[12px] bg-white/8 p-[14px_18px] shadow-[inset_0_0_0_1px_rgba(255,255,255,.16)] backdrop-blur-[6px]">
-      <span className="flex items-center gap-1.5 font-display text-[26px] font-bold tracking-[-.02em] text-white tabular-nums">
-        {value}
-        {flame && <Flame className="size-[18px] fill-orange-400 text-orange-400" aria-hidden="true" />}
-      </span>
+      {loading ? (
+        <span aria-hidden="true" className="block h-[26px] w-9 animate-pulse rounded-md bg-white/20" />
+      ) : (
+        <span className="flex items-center gap-1.5 font-display text-[26px] font-bold tracking-[-.02em] text-white tabular-nums">
+          {value}
+          {flame && <Flame className="size-[18px] fill-orange-400 text-orange-400" aria-hidden="true" />}
+        </span>
+      )}
       <span className="text-[11px] font-bold uppercase tracking-[.07em] text-white/60">{label}</span>
     </div>
   )
@@ -303,14 +317,14 @@ function ItemPill({ item, nowMs }) {
 // peek stays keyboard-reachable, per the handoff's own instruction —
 // touch devices get neither (no hover, and focus doesn't fire on tap),
 // where tapping the day just selects it instead, exactly as asked.
-function MonthDayCell({ cell, isToday, isSelected, items, hasAnyItems, nowMs, canAdd, onSelect, onOpenDay, onAdd }) {
+function MonthDayCell({ cell, isToday, isSelected, items, hasAnyItems, nowMs, canAdd, loading, onSelect, onOpenDay, onAdd }) {
   const [active, setActive] = useState(false)
   const visible = items.slice(0, MONTH_PILL_CAP)
   const overflow = Math.max(0, items.length - MONTH_PILL_CAP)
   const hasCompleted = items.some((i) => i.completed)
 
   function handleClick() {
-    if (!cell.inMonth) return
+    if (!cell.inMonth || loading) return
     if (hasAnyItems) {
       onSelect(cell.key)
       return
@@ -361,20 +375,26 @@ function MonthDayCell({ cell, isToday, isSelected, items, hasAnyItems, nowMs, ca
         </div>
 
         <div className="mt-2 flex flex-col gap-1">
-          {visible.map((item) => (
-            <ItemPill key={`${item.kind}-${item.id}`} item={item} nowMs={nowMs} />
-          ))}
-          {overflow > 0 && <span className="mt-[5px] text-[11px] font-bold text-[#7c5fb0]">+{overflow} more</span>}
-          {items.length === 0 && cell.inMonth && active && canAdd && (
-            <span className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-bold text-[#7c5fb0]">
-              <Plus className="size-[11px]" aria-hidden="true" />
-              Add task
-            </span>
+          {loading ? (
+            <Skeleton className="h-[19px] w-[70%]" />
+          ) : (
+            <>
+              {visible.map((item) => (
+                <ItemPill key={`${item.kind}-${item.id}`} item={item} nowMs={nowMs} />
+              ))}
+              {overflow > 0 && <span className="mt-[5px] text-[11px] font-bold text-[#7c5fb0]">+{overflow} more</span>}
+              {items.length === 0 && cell.inMonth && active && canAdd && (
+                <span className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-bold text-[#7c5fb0]">
+                  <Plus className="size-[11px]" aria-hidden="true" />
+                  Add task
+                </span>
+              )}
+            </>
           )}
         </div>
       </button>
 
-      {active && overflow > 0 && (
+      {!loading && active && overflow > 0 && (
         <div className="absolute left-1/2 top-full z-20 w-[238px] -translate-x-1/2 translate-y-2 rounded-xl bg-white p-[12px_13px] shadow-[0_18px_40px_-18px_rgba(37,37,37,.55),0_0_0_1px_rgba(51,34,74,.08)]">
           <p className="mb-2 font-display text-xs font-semibold text-[#33224a]">
             {cell.date.toLocaleDateString(undefined, { weekday: 'long' })} {cell.date.getDate()} — {items.length} item
@@ -405,7 +425,7 @@ function MonthDayCell({ cell, isToday, isSelected, items, hasAnyItems, nowMs, ca
 // previously-shipped, explicitly-requested feature (click a week number
 // → jump to Week view) kept alongside the new visual design rather than
 // dropped for it.
-function MonthGrid({ grid, todayKey, selectedKey, itemsByDay, nowMs, now, filterState, onSelectDay, onOpenDay, onOpenWeek, onAddDay }) {
+function MonthGrid({ grid, todayKey, selectedKey, itemsByDay, nowMs, now, filterState, loading, onSelectDay, onOpenDay, onOpenWeek, onAddDay }) {
   const todayStart = startOfDay(now)
   const weeks = Array.from({ length: grid.length / 7 }, (_, i) => grid.slice(i * 7, i * 7 + 7))
 
@@ -443,6 +463,7 @@ function MonthGrid({ grid, todayKey, selectedKey, itemsByDay, nowMs, now, filter
                   hasAnyItems={allItems.length > 0}
                   nowMs={nowMs}
                   canAdd={cell.date >= todayStart}
+                  loading={loading}
                   onSelect={onSelectDay}
                   onOpenDay={onOpenDay}
                   onAdd={onAddDay}
@@ -458,7 +479,7 @@ function MonthGrid({ grid, todayKey, selectedKey, itemsByDay, nowMs, now, filter
 
 const CARD_SHADOW = '0 0 0 1px rgba(51,34,74,.08), 0 18px 40px -34px rgba(37,37,37,.6)'
 
-function WeekView({ grid, todayKey, selectedKey, itemsByDay, nowMs, filterState, onSelectDay, onOpenDay }) {
+function WeekView({ grid, todayKey, selectedKey, itemsByDay, nowMs, filterState, loading, onSelectDay, onOpenDay }) {
   return (
     <div className="overflow-hidden rounded-2xl bg-white" style={{ boxShadow: CARD_SHADOW }}>
       <div className="grid border-b border-[#ece9f2]" style={{ gridTemplateColumns: '88px repeat(7,minmax(0,1fr))' }}>
@@ -496,9 +517,9 @@ function WeekView({ grid, todayKey, selectedKey, itemsByDay, nowMs, filterState,
                   cell.key === selectedKey && 'bg-[rgba(124,95,176,.05)]'
                 )}
               >
-                {items.map((item) => (
-                  <ItemPill key={`${item.kind}-${item.id}`} item={item} nowMs={nowMs} />
-                ))}
+                {loading
+                  ? band.key !== 'anytime' && <Skeleton className="h-[19px] w-full max-w-[72px]" />
+                  : items.map((item) => <ItemPill key={`${item.kind}-${item.id}`} item={item} nowMs={nowMs} />)}
               </div>
             )
           })}
@@ -535,7 +556,7 @@ function DayItemRow({ item, nowMs }) {
   )
 }
 
-function DayView({ date, items, nowMs }) {
+function DayView({ date, items, nowMs, loading }) {
   return (
     <div className="overflow-hidden rounded-2xl bg-white" style={{ boxShadow: CARD_SHADOW }}>
       <div className="flex items-baseline justify-between border-b border-[#ece9f2] p-[20px_22px]">
@@ -543,7 +564,7 @@ function DayView({ date, items, nowMs }) {
           {date.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
         </h2>
         <span className="text-xs font-bold text-[#a8a5a0]">
-          {items.length} item{items.length === 1 ? '' : 's'}
+          {loading ? '–' : items.length} item{items.length === 1 ? '' : 's'}
         </span>
       </div>
       {TIME_BANDS.map((band) => {
@@ -552,10 +573,16 @@ function DayView({ date, items, nowMs }) {
           <div key={band.key} className="grid min-h-[76px] border-b border-[#f2eff6] last:border-b-0" style={{ gridTemplateColumns: '120px 1fr' }}>
             <div className="p-[18px_22px] text-[11px] font-bold uppercase tracking-[.08em] text-[#a8a5a0]">{band.label}</div>
             <div className="flex flex-col justify-center gap-[7px] p-[14px_22px_16px]">
-              {bandItems.length === 0 && <span className="text-xs text-[#c9c6d1]">—</span>}
-              {bandItems.map((item) => (
-                <DayItemRow key={`${item.kind}-${item.id}`} item={item} nowMs={nowMs} />
-              ))}
+              {loading ? (
+                band.key !== 'anytime' && <Skeleton className="h-8 w-full max-w-[260px] rounded-[9px]" />
+              ) : (
+                <>
+                  {bandItems.length === 0 && <span className="text-xs text-[#c9c6d1]">—</span>}
+                  {bandItems.map((item) => (
+                    <DayItemRow key={`${item.kind}-${item.id}`} item={item} nowMs={nowMs} />
+                  ))}
+                </>
+              )}
             </div>
           </div>
         )
@@ -628,7 +655,7 @@ function SelectedDayRow({ item, nowMs, onToggle }) {
   )
 }
 
-function SelectedDayCard({ date, isToday, items, nowMs, onToggle, canAdd, onAddClick }) {
+function SelectedDayCard({ date, isToday, items, nowMs, loading, onToggle, canAdd, onAddClick }) {
   return (
     <div className="rounded-2xl bg-white p-[18px]" style={{ boxShadow: CARD_SHADOW }}>
       <p className="text-[11px] font-bold uppercase tracking-[.09em] text-[#a8a5a0]">
@@ -638,7 +665,12 @@ function SelectedDayCard({ date, isToday, items, nowMs, onToggle, canAdd, onAddC
         {date.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'short' })}
       </h3>
 
-      {items.length === 0 ? (
+      {loading ? (
+        <div className="mt-3.5 flex flex-col gap-2">
+          <Skeleton className="h-[48px] w-full rounded-[11px]" />
+          <Skeleton className="h-[48px] w-full rounded-[11px]" />
+        </div>
+      ) : items.length === 0 ? (
         <p className="mt-3.5 text-sm text-[#8b8794]">Nothing scheduled. A clear day.</p>
       ) : (
         <div className="mt-3.5 flex flex-col gap-2">
@@ -877,6 +909,7 @@ export function CalendarPage() {
     }
   }
 
+  const loading = status === 'loading'
   const heroToday = now.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
   const noun = periodNoun(viewType)
   // StatCard's label already renders CSS-uppercase, so this doesn't need
@@ -901,7 +934,11 @@ export function CalendarPage() {
                 <h1 className="m-0 font-display text-[44px] font-bold leading-[1.05] tracking-[-.03em] text-white">
                   {viewLabel(viewType, anchorDate, range)}
                 </h1>
-                <p className="m-0 text-sm text-white/62">{heroSubtitle}</p>
+                {loading ? (
+                  <span aria-hidden="true" className="mt-0.5 block h-[17px] w-64 max-w-full animate-pulse rounded-full bg-white/15" />
+                ) : (
+                  <p className="m-0 text-sm text-white/62">{heroSubtitle}</p>
+                )}
               </div>
               <div className="flex items-center gap-1">
                 <button
@@ -930,9 +967,9 @@ export function CalendarPage() {
               </div>
             </div>
             <div className="flex flex-wrap gap-3.5">
-              <StatCard value={status === 'loading' ? '–' : periodStats.due} label={statLabel} />
-              <StatCard value={status === 'loading' ? '–' : periodStats.overdue} label="Overdue" />
-              <StatCard value={status === 'loading' ? '–' : periodStats.completed} label="Completed" />
+              <StatCard value={periodStats.due} label={statLabel} loading={loading} />
+              <StatCard value={periodStats.overdue} label="Overdue" loading={loading} />
+              <StatCard value={periodStats.completed} label="Completed" loading={loading} />
               <StatCard value={currentStreak} label="Day streak" flame={currentStreak > 0} />
             </div>
           </div>
@@ -999,6 +1036,7 @@ export function CalendarPage() {
                 nowMs={nowMs}
                 now={now}
                 filterState={activeFilterState}
+                loading={loading}
                 onSelectDay={setSelectedKey}
                 onOpenDay={goToDay}
                 onOpenWeek={goToWeek}
@@ -1012,11 +1050,17 @@ export function CalendarPage() {
                 itemsByDay={itemsByDay}
                 nowMs={nowMs}
                 filterState={activeFilterState}
+                loading={loading}
                 onSelectDay={setSelectedKey}
                 onOpenDay={goToDay}
               />
             ) : (
-              <DayView date={anchorDate} items={filterItems(itemsByDay.get(selectedKey) ?? [], activeFilterState, nowMs)} nowMs={nowMs} />
+              <DayView
+                date={anchorDate}
+                items={filterItems(itemsByDay.get(selectedKey) ?? [], activeFilterState, nowMs)}
+                nowMs={nowMs}
+                loading={loading}
+              />
             )}
           </div>
 
@@ -1026,6 +1070,7 @@ export function CalendarPage() {
               isToday={localDayKey(viewingDate) === todayKey}
               items={selectedItems}
               nowMs={nowMs}
+              loading={loading}
               onToggle={handleToggleItem}
               canAdd={isUpcoming}
               onAddClick={() => openAddForDay(viewingDate)}
