@@ -4,6 +4,7 @@ import { X, SquarePlus, Target, CalendarDays, ListPlus, CalendarClock, FileText 
 import { Button } from '@/components/ui/button'
 import { updateTask } from '@/lib/tasks'
 import { useTaskStore } from '@/context/TaskStoreContext'
+import { useAddTaskFab } from '@/context/AddTaskFabContext'
 import { cn } from '@/lib/utils'
 
 const TASK_DETAIL_PATH = /^\/tasks\/(\d+)$/
@@ -109,7 +110,10 @@ function ActionCard({ children, as: Tag = 'div', ...props }) {
 // of the page, same as OverdueGateModal; only the content's position
 // changed.
 export function AddTaskFab() {
-  const [open, setOpen] = useState(false)
+  // Shared with the rest of the authenticated shell (AddTaskFabContext)
+  // rather than local state — so a page like CalendarPage's empty-day
+  // state can open this same menu itself, not just the button below.
+  const { open, setOpen } = useAddTaskFab()
   // Reduced motion drops the whole press-transition's duration to 0 —
   // per fab-motion-handoff.md's own suggested shortcut, rather than
   // special-casing the rotation and ring separately. At 0ms, `rotate`

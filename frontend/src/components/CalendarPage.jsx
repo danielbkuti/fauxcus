@@ -1,10 +1,11 @@
 import { Fragment, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react'
+import { CalendarDays, ChevronLeft, ChevronRight, SquarePlus } from 'lucide-react'
 import { fetchSubtasksDueBetween, fetchTasksDueBetween } from '@/lib/tasks'
 import { cn, formatDeadline } from '@/lib/utils'
 import { useDeadlineStatus } from '@/hooks/useDeadlineStatus'
 import { useTaskStore } from '@/context/TaskStoreContext'
+import { useAddTaskFab } from '@/context/AddTaskFabContext'
 
 const WEEKDAY_LABELS = ['M', 'T', 'W', 'T', 'F', 'S', 'S']
 
@@ -313,7 +314,16 @@ function PickerGrid({ grid, todayKey, selectedKey, itemsByDay, now, onSelect, on
 
 // The "what's due" list — used as the side panel for month/week, and
 // as the main (only) content for day view.
-function DueItemsList({ status, items }) {
+//
+// `canAdd` (only ever true for today or a future day — see
+// CalendarPage's own isUpcoming) swaps the plain empty state for a
+// clickable one that opens the FAB's own menu, same "dashed box ->
+// launch add flow" recipe TaskList's and Dashboard's empty states
+// already use elsewhere in this app — reused here rather than
+// invented fresh. A *past* empty day stays the plain, non-interactive
+// version: nothing due back then isn't an invitation to backdate a
+// new task.
+function DueItemsList({ status, items, canAdd, onAddClick }) {
   if (status === 'loading') return <p className="text-sm text-muted-foreground">Loading…</p>
 
   if (status === 'error') {
@@ -321,6 +331,24 @@ function DueItemsList({ status, items }) {
   }
 
   if (items.length === 0) {
+    if (canAdd) {
+      return (
+        <button
+          type="button"
+          onClick={onAddClick}
+          className="group flex w-full flex-col items-center gap-3 rounded-[14px] border border-dashed py-10 text-center transition-colors hover:border-[#56a456]/50 hover:bg-[#56a456]/5"
+        >
+          <div className="flex size-11 items-center justify-center rounded-full bg-[#56a456]/10 text-[#56a456] transition-transform duration-200 group-hover:scale-110">
+            <SquarePlus className="size-5" />
+          </div>
+          <p className="text-sm font-medium">Nothing due this day.</p>
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-[#56a456] px-4 py-1.5 text-xs font-semibold text-white shadow-sm shadow-[#56a456]/25 transition-transform duration-200 group-hover:scale-105">
+            <SquarePlus className="size-3.5" />
+            Add a task or goal
+          </span>
+        </button>
+      )
+    }
     return (
       <div className="flex flex-col items-center gap-2 rounded-[14px] border border-dashed py-10 text-center">
         <CalendarDays className="size-5 text-muted-foreground" />
@@ -341,6 +369,7 @@ function DueItemsList({ status, items }) {
 export function CalendarPage() {
   const { tasks } = useTaskStore()
   const taskNameById = useMemo(() => new Map(tasks.map((t) => [t.id, t.name])), [tasks])
+  const { setOpen: openAddFab } = useAddTaskFab()
 
   const now = useMemo(() => new Date(), [])
   const [viewType, setViewType] = useState('month') // 'month' | 'week' | 'day'
@@ -405,6 +434,13 @@ export function CalendarPage() {
 
   const todayKey = localDayKey(now)
   const selectedItems = itemsByDay.get(selectedKey) ?? []
+  // The date the empty-state "add a task/goal" prompt would apply to —
+  // the single visible day in Day view, otherwise whichever day is
+  // selected in the Month/Week grid. Only offered for today or a
+  // future day; see DueItemsList's own comment on why a past empty
+  // day doesn't get it.
+  const viewingDate = viewType === 'day' ? anchorDate : (grid?.find((c) => c.key === selectedKey)?.date ?? now)
+  const isUpcoming = viewingDate >= startOfDay(now)
 
   function goToPrevious() {
     setAnchorDate((current) => {
@@ -497,7 +533,12 @@ export function CalendarPage() {
         // Nothing to pick between — the range is exactly the one
         // visible day, so its item list is the main content, not a
         // side panel next to a picker.
-        <DueItemsList status={status} items={selectedItems} />
+        <DueItemsList
+          status={status}
+          items={selectedItems}
+          canAdd={isUpcoming}
+          onAddClick={() => openAddFab(true)}
+        />
       ) : (
         <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[1fr_336px]">
           <div className="relative rounded-[14px] bg-card p-5 ring-1 ring-foreground/10">
@@ -517,13 +558,14 @@ export function CalendarPage() {
 
           <div className="flex flex-col gap-3.5">
             <h2 className="m-0 font-display text-[15px] font-semibold tracking-[.02em] text-foreground">
-              {(grid.find((c) => c.key === selectedKey)?.date ?? now).toLocaleDateString(undefined, {
-                weekday: 'long',
-                month: 'long',
-                day: 'numeric',
-              })}
+              {viewingDate.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
             </h2>
-            <DueItemsList status={status} items={selectedItems} />
+            <DueItemsList
+              status={status}
+              items={selectedItems}
+              canAdd={isUpcoming}
+              onAddClick={() => openAddFab(true)}
+            />
           </div>
         </div>
       )}
