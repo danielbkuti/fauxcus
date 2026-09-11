@@ -603,9 +603,10 @@
   }
 }
 
-/* --- CalendarPage: month grid week-scroll ------------------------------
-   Plays once (no `infinite`) each time the month grid's up/down stepper
-   shifts its visible window by a week — a short slide-in-and-settle
+/* --- CalendarPage: month grid navigation ---------------------------------
+   Plays once (no `infinite`) each time the month grid's steppers move it —
+   up/down (the week-number column's own stepper, scrolls the window by a
+   row) or left/right (Previous/Next month) — a short slide-in-and-settle
    rather than the grid just cutting to the new set of rows. */
 @keyframes month-grid-slide-up {
   from { transform: translateY(10px); opacity: 0.4; }
@@ -615,12 +616,24 @@
   from { transform: translateY(-10px); opacity: 0.4; }
   to { transform: translateY(0); opacity: 1; }
 }
+@keyframes month-grid-slide-left {
+  from { transform: translateX(-14px); opacity: 0.4; }
+  to { transform: translateX(0); opacity: 1; }
+}
+@keyframes month-grid-slide-right {
+  from { transform: translateX(14px); opacity: 0.4; }
+  to { transform: translateX(0); opacity: 1; }
+}
 .animate-month-grid-slide-up { animation: month-grid-slide-up 220ms ease-out; }
 .animate-month-grid-slide-down { animation: month-grid-slide-down 220ms ease-out; }
+.animate-month-grid-slide-left { animation: month-grid-slide-left 220ms ease-out; }
+.animate-month-grid-slide-right { animation: month-grid-slide-right 220ms ease-out; }
 
 @media (prefers-reduced-motion: reduce) {
   .animate-month-grid-slide-up,
-  .animate-month-grid-slide-down {
+  .animate-month-grid-slide-down,
+  .animate-month-grid-slide-left,
+  .animate-month-grid-slide-right {
     animation: none;
   }
 }
