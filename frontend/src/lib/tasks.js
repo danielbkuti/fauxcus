@@ -11,7 +11,10 @@ import { apiFetch } from './api'
 // (DRF's PageNumberPagination builds it from the request); strip the
 // origin so it can be replayed through apiFetch, which prepends
 // API_BASE_URL itself.
-async function fetchAllPages(path) {
+// Exported so lib/calendarItems.js (a separate resource, but the same
+// "walk every page, no page-number UI anywhere" need) can reuse this
+// instead of a second copy of the same loop.
+export async function fetchAllPages(path) {
   let results = []
   let count = 0
 

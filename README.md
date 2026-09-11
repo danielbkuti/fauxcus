@@ -92,6 +92,7 @@ The deadline-digest scheduler is also handled differently in production than in 
 - Deadline editor: a portal-based wheel picker (day/month/year, optional time-of-day), shared across every place a deadline gets set
 - Progress page: a full-bleed stats band (completion rate, streaks, a 7-day sparkline, a 30/90/all-time period toggle) over a chart section — weekly created-vs-closed bars, a status breakdown, a GitHub-style daily-activity heatmap doubling as a streak visual, and day-of-week/time-of-day distributions — plus a searchable archive of everything completed
 - In-app notifications: a bell with an unread badge for tasks/subtasks due soon, backed by a daily email digest (see [Deployment](#deployment) for how the digest actually runs in production vs. local dev)
+- Calendar: Month/Week/Day views (Week/Day on a real 24-hour hourly grid) over tasks, subtasks, and calendar items alike, with deadline-state color coding, a filterable rail, and quick-add straight from an empty day
 
 ### Authentication
 - Custom user model
@@ -105,6 +106,9 @@ The deadline-digest scheduler is also handled differently in production than in 
 - Deadlines with date and optional time-of-day
 - Automatic parent-task completion propagation from subtasks
 - Per-task activity log (created, renamed, completed/reopened, deadline changes)
+
+### Calendar Items
+- Create/delete a calendar item — a time-anchored entry (start time, optional end time, optional location) distinct from a Task; see [Task vs. Calendar Item](#task-vs-calendar-item) below
 
 ### API
 - RESTful endpoints
@@ -165,6 +169,10 @@ The same page in two of its four deadline-driven states — in progress (purple,
 
 - GET /api/subtasks/
 - POST /api/subtasks/
+
+- GET /api/calendar-items/
+- POST /api/calendar-items/
+- DELETE /api/calendar-items/{id}/
 ```
 
  ### Filtering Example
@@ -175,7 +183,7 @@ The same page in two of its four deadline-driven states — in progress (purple,
 
 ### Date-Range Filtering Example
 
-Both `/api/tasks/` and `/api/subtasks/` accept a `dateDeadline` range — what a calendar view filters on to fetch "what's due this month" instead of walking the entire list client-side. `dateDeadline` is stored in UTC; convert the viewer's local day/month boundaries to UTC before passing them here rather than relying on a same-day-in-UTC assumption.
+`/api/tasks/` and `/api/subtasks/` accept a `dateDeadline` range, and `/api/calendar-items/` a `dateStart` range — what the calendar view filters each of the three on to fetch "what's due/happening this month" instead of walking the entire list client-side. Both fields are stored in UTC; convert the viewer's local day/month boundaries to UTC before passing them here rather than relying on a same-day-in-UTC assumption.
 
 ```
 /api/tasks/?dateDeadline__gte=2026-09-01T00:00:00Z&dateDeadline__lte=2026-10-01T00:00:00Z
@@ -322,11 +330,18 @@ Every page whose content depends on an async fetch (Dashboard, Tasks, a task's d
 
 **This is a required pattern for any new page or view added to this app going forward** — a `status === 'loading'` branch that returns plain text or nothing is a regression, not a stopgap to clean up later.
 
+### Task vs. Calendar Item
+
+A Task is deadline-anchored — "finish this *by* a point in time" — and naturally decomposes into subtasks toward completion. A CalendarItem is time-anchored — "this *happens at* (or between) these times" — and isn't something you complete at all; it just occurs. Forcing an event through Task's shape (`dateDeadline` + `completed`) would mean it either sits "incomplete" forever or gets auto-completed the instant it passes, neither of which means anything for something like "Dentist appointment" or "Sam's birthday". So it's its own model (`backend/tasks/models.py`): `dateStart` (required) + `dateEnd` (optional — many calendar items are a single instant, not a span), no `completed`, no subtasks, no activity log. On the frontend it slots into the calendar page as a fifth item `kind` (alongside task/subtask) with its own always-steady color — a calendar item is never overdue/urgent/done, so it doesn't participate in those deadline-urgency states at all.
+
+Deliberately kept small for a first pass: creation is a plain inline form in the FAB (native `<input type="datetime-local">`, not the app's wheel-picker `DeadlineEditor` — that component is built around a single Task deadline and a popover anchored to a trigger button, neither of which fits this menu's own small expanding card), there's no edit flow yet (delete-and-recreate), and no recurrence (a "every Monday" event is a materially harder feature — exception dates, an end condition — not a small extension of this).
+
 ---
 
 # Future Improvements
 
 - Goals page (currently a placeholder)
+- Calendar item editing and recurrence (currently create/delete only — see [Task vs. Calendar Item](#task-vs-calendar-item))
 - JWT authentication
 
 ---

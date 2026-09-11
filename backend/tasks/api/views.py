@@ -7,8 +7,8 @@ from rest_framework import viewsets, permissions, mixins, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from ..models import Task, SubTask, TaskActivity, Notification
-from .serializers import TaskSerializer, SubTaskSerializer, NotificationSerializer
+from ..models import Task, SubTask, TaskActivity, Notification, CalendarItem
+from .serializers import TaskSerializer, SubTaskSerializer, NotificationSerializer, CalendarItemSerializer
 from rest_framework.filters import OrderingFilter
 from django_filters.rest_framework import DjangoFilterBackend
 
@@ -84,6 +84,30 @@ class SubTaskViewSet(viewsets.ModelViewSet):
         name = instance.name
         instance.delete()
         TaskActivity.objects.create(task=task, message=f'Subtask "{name}" removed')
+
+
+class CalendarItemViewSet(viewsets.ModelViewSet):
+    """
+    REST API endpoint for a user's own calendar items — see
+    CalendarItem's own docstring for what these are and why they're a
+    separate model from Task.
+    """
+
+    serializer_class = CalendarItemSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    filter_backends = [DjangoFilterBackend]
+
+    # Same gte/lte-only reasoning as TaskViewSet.filterset_fields — see
+    # there. dateStart is always set (unlike Task's dateDeadline), so
+    # unlike that filter there's no "no deadline at all" case to worry
+    # about excluding.
+    filterset_fields = {"dateStart": ["gte", "lte"]}
+
+    def get_queryset(self):
+        return CalendarItem.objects.filter(user=self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
 
 
 class NotificationViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, mixins.UpdateModelMixin, viewsets.GenericViewSet):

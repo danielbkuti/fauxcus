@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from ..models import Task, SubTask, TaskActivity, Notification
+from ..models import Task, SubTask, TaskActivity, Notification, CalendarItem
 from django.utils import timezone
 
 
@@ -81,6 +81,31 @@ class TaskSerializer(serializers.ModelSerializer):
         # dateCompleted is only ever set by Task.save() reacting to
         # `completed` changing — never client-writable.
         read_only_fields = ["dateCreated", "dateCompleted"]
+
+
+class CalendarItemSerializer(serializers.ModelSerializer):
+    def validate_dateStart(self, value):
+        # Same "no backdating" rule Task/SubTask's own dateDeadline
+        # enforces — see TaskSerializer.validate_dateDeadline above.
+        if value < timezone.now():
+            raise serializers.ValidationError("Start time cannot be in the past.")
+        return value
+
+    def validate(self, data):
+        # On a partial update (PATCH) either side might be absent from
+        # `data` — fall back to the existing instance's value so a
+        # PATCH that only touches one of the two still gets checked
+        # against the other's real, current value.
+        start = data.get("dateStart", getattr(self.instance, "dateStart", None))
+        end = data.get("dateEnd", getattr(self.instance, "dateEnd", None))
+        if start and end and end < start:
+            raise serializers.ValidationError("End time can't be before the start time.")
+        return data
+
+    class Meta:
+        model = CalendarItem
+        fields = ["id", "name", "location", "dateCreated", "dateStart", "dateEnd"]
+        read_only_fields = ["dateCreated"]
 
 
 class NotificationSerializer(serializers.ModelSerializer):

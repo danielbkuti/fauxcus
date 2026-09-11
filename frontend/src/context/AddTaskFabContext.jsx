@@ -1,4 +1,4 @@
-import { createContext, useContext, useState } from 'react'
+import { createContext, useCallback, useContext, useState } from 'react'
 
 const AddTaskFabContext = createContext(null)
 
@@ -20,8 +20,25 @@ const AddTaskFabContext = createContext(null)
 export function AddTaskFabProvider({ children }) {
   const [open, setOpen] = useState(false)
   const [prefillDate, setPrefillDate] = useState(null)
+  // Calendar items aren't part of the shared TaskStoreContext (they're
+  // a separate resource — see lib/calendarItems.js), and CalendarPage
+  // fetches its own range independently, so there's no automatic path
+  // from "the FAB just created one" to "the calendar page's already-
+  // fetched data includes it". This counter is that path: the FAB bumps
+  // it after a successful create, CalendarPage's own fetch effect
+  // depends on it too, so a create while already on the calendar page
+  // triggers a real refetch of whatever range is on screen instead of
+  // the new item only showing up after a manual reload. Living here
+  // rather than a dedicated context is a bit of a stretch — this
+  // provider's actual job is "is the FAB menu open" — but it's already
+  // the one thing both the FAB and CalendarPage share, so reusing it
+  // beats adding a third provider to the tree for a single counter.
+  const [calendarItemsVersion, setCalendarItemsVersion] = useState(0)
+  const bumpCalendarItemsVersion = useCallback(() => setCalendarItemsVersion((v) => v + 1), [])
   return (
-    <AddTaskFabContext.Provider value={{ open, setOpen, prefillDate, setPrefillDate }}>
+    <AddTaskFabContext.Provider
+      value={{ open, setOpen, prefillDate, setPrefillDate, calendarItemsVersion, bumpCalendarItemsVersion }}
+    >
       {children}
     </AddTaskFabContext.Provider>
   )

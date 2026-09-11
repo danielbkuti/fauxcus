@@ -282,6 +282,37 @@ class SubTask(models.Model):
         return f"{self.name} (Subtask of {self.task.name})"
 
 
+class CalendarItem(models.Model):
+    """
+    A time-anchored calendar entry — "this happens at/between these
+    times" — as distinct from a Task ("finish this by a deadline").
+    Deliberately minimal and deliberately *not* a Task subtype: no
+    `completed`, no subtasks, no activity log. An event isn't something
+    you check off, it's something that occurs; forcing it through Task's
+    completion machinery would mean either it sits "incomplete" forever
+    or gets auto-completed the instant it passes, neither of which means
+    anything for something like "Dentist appointment" or "Sam's
+    birthday". `dateEnd` is optional — many calendar items (a birthday,
+    a one-line reminder) are a single point in time, not a span.
+    """
+
+    user = models.ForeignKey("user.CustomUser", related_name="calendar_items", on_delete=models.CASCADE)
+    name = models.CharField(max_length=100, null=False, blank=False)
+    location = models.CharField(max_length=200, blank=True, null=True)
+    dateCreated = models.DateTimeField(auto_now_add=True)
+    dateStart = models.DateTimeField(null=False, blank=False)
+    dateEnd = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        ordering = ["dateStart"]
+        indexes = [
+            models.Index(fields=["user", "dateStart"]),
+        ]
+
+
 class Notification(models.Model):
     """
     In-app (and, via the same digest run, email) notifications for a

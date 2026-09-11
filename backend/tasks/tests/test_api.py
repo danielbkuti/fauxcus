@@ -4,7 +4,7 @@ from django.contrib.auth import get_user_model
 from django.utils import timezone
 from rest_framework.test import APITestCase
 from rest_framework import status
-from ..models import Task, SubTask
+from ..models import Task, SubTask, CalendarItem
 
 
 class TaskAPITestCase(APITestCase):
@@ -214,4 +214,117 @@ class SubTaskAPITestCase(APITestCase):
 
         self.assertEqual(response.status_code, 200)
         names = [s["name"] for s in response.data["results"]]
+        self.assertEqual(names, ["In range"])
+
+
+class CalendarItemAPITestCase(APITestCase):
+
+    def setUp(self):
+        self.User = get_user_model()
+
+        self.user1 = self.User.objects.create_user(
+            username="caluser1",
+            email="caluser1@test.com",
+            password="password123",
+            is_active=True,
+        )
+        self.user2 = self.User.objects.create_user(
+            username="caluser2",
+            email="caluser2@test.com",
+            password="password123",
+            is_active=True,
+        )
+
+        self.url = "/api/calendar-items/"
+
+    def authenticate(self, user):
+        self.client.force_authenticate(user=user)
+
+    def test_authentication_required(self):
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_user_isolation(self):
+        CalendarItem.objects.create(user=self.user1, name="User1 item", dateStart=timezone.now() + timedelta(days=1))
+        CalendarItem.objects.create(user=self.user2, name="User2 item", dateStart=timezone.now() + timedelta(days=1))
+
+        self.authenticate(self.user1)
+        response = self.client.get(self.url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.data["results"]), 1)
+        self.assertEqual(response.data["results"][0]["name"], "User1 item")
+
+    def test_create_assigns_user(self):
+        self.authenticate(self.user1)
+        start = timezone.now() + timedelta(days=2)
+
+        response = self.client.post(self.url, {"name": "Dentist", "dateStart": start.isoformat()})
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(CalendarItem.objects.count(), 1)
+        self.assertEqual(CalendarItem.objects.first().user, self.user1)
+
+    def test_dateStart_cannot_be_in_the_past(self):
+        self.authenticate(self.user1)
+
+        response = self.client.post(
+            self.url, {"name": "Backdated", "dateStart": (timezone.now() - timedelta(days=1)).isoformat()}
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(CalendarItem.objects.count(), 0)
+
+    def test_dateEnd_cannot_be_before_dateStart(self):
+        self.authenticate(self.user1)
+        start = timezone.now() + timedelta(days=2)
+
+        response = self.client.post(
+            self.url,
+            {"name": "Backwards", "dateStart": start.isoformat(), "dateEnd": (start - timedelta(hours=1)).isoformat()},
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(CalendarItem.objects.count(), 0)
+
+    def test_dateEnd_is_optional(self):
+        self.authenticate(self.user1)
+
+        response = self.client.post(
+            self.url, {"name": "Point in time", "dateStart": (timezone.now() + timedelta(days=2)).isoformat()}
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertIsNone(response.data["dateEnd"])
+
+    def test_cannot_delete_other_users_item(self):
+        other_item = CalendarItem.objects.create(
+            user=self.user2, name="Not yours", dateStart=timezone.now() + timedelta(days=1)
+        )
+
+        self.authenticate(self.user1)
+        response = self.client.delete(f"{self.url}{other_item.id}/")
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(CalendarItem.objects.count(), 1)
+
+    def test_filtering_date_range(self):
+        """Same dateStart__gte/__lte filtering as Task/SubTask's own
+        dateDeadline — see SubTaskAPITestCase's own version of this test
+        for why it's gte/lte rather than an exact-day lookup."""
+        now = timezone.now()
+        CalendarItem.objects.create(user=self.user1, name="In range", dateStart=now + timedelta(days=2))
+        CalendarItem.objects.create(user=self.user1, name="Out of range", dateStart=now + timedelta(days=40))
+
+        self.authenticate(self.user1)
+        response = self.client.get(
+            self.url,
+            {
+                "dateStart__gte": now.isoformat(),
+                "dateStart__lte": (now + timedelta(days=7)).isoformat(),
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        names = [c["name"] for c in response.data["results"]]
         self.assertEqual(names, ["In range"])

@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Plus, Flame, Hammer } from 'lucide-react'
+import { ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Plus, Flame, Hammer, CalendarDays, Trash2 } from 'lucide-react'
 import { fetchSubtasksDueBetween, fetchTasksDueBetween, updateSubTask, updateTask } from '@/lib/tasks'
+import { fetchCalendarItemsDueBetween, deleteCalendarItem } from '@/lib/calendarItems'
 import { cn, URGENT_WINDOW_MS } from '@/lib/utils'
 import { computeStats } from '@/lib/stats'
 import { useTaskStore } from '@/context/TaskStoreContext'
@@ -24,14 +25,18 @@ const VIEW_TYPES = [
 const WEEKDAY_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
 // The five deadline states the handoff's palette table defines, plus
-// 'goal' — unused today (Goals has no data model yet, see GoalsRailCard)
-// but kept so the filter chip and this map agree on the same five keys.
+// 'goal' (unused today — Goals has no data model yet, see
+// GoalsRailCard) and 'event' — a calendar item is never overdue/urgent/
+// done the way a task is (there's no completion, no deadline anxiety;
+// see lib/calendarItems.js), so it gets its own flat, always-steady
+// color instead of participating in the deadline-urgency states at all.
 const STATE_PALETTE = {
   progress: { bg: '#f3e8ff', fg: '#6b46a8', border: '#e2d0f5', dot: '#7c5fb0' },
   urgent: { bg: '#ffe8e0', fg: '#9a3412', border: '#fca98d', dot: '#ea580c' },
   overdue: { bg: '#fee2e2', fg: '#b91c1c', border: '#fca5a5', dot: '#b91c1c' },
   done: { bg: '#d1fae5', fg: '#047857', border: '#6ee7b7', dot: '#059669' },
   goal: { bg: '#e9f0fb', fg: '#1e488f', border: '#c3d8f2', dot: '#4f7fd4' },
+  event: { bg: '#e0f7fa', fg: '#00707a', border: '#b2ebf2', dot: '#00acc1' },
 }
 
 // 'all' isn't a real deadline state (it means "no filter"), so it gets
@@ -46,6 +51,7 @@ const FILTER_CHIPS = [
   { key: 'urgent', state: 'urgent', label: 'Due soon' },
   { key: 'overdue', state: 'overdue', label: 'Overdue' },
   { key: 'done', state: 'done', label: 'Done' },
+  { key: 'event', state: 'event', label: 'Events' },
   { key: 'goal', state: 'goal', label: 'Goals' },
 ]
 
@@ -162,14 +168,22 @@ function computeVisibleRange(viewType, anchorDate, monthWeekOffset = 0) {
   return { start: cells[0].date, end: addDays(cells[cells.length - 1].date, 1) }
 }
 
-// Flattens a page of tasks + a page of subtasks (each already filtered
-// server-side to the visible range) into one list of {kind, id, taskId,
-// name, dateDeadline, completed, parentName} items. `taskNameById`
-// resolves a subtask's parent name from the already-fully-loaded
-// TaskStoreContext (not the range-filtered `tasks` array this function
-// also receives) — that array routinely excludes a due subtask's parent,
-// which may have a different deadline or none at all.
-function flattenItems(tasks, subtasks, taskNameById) {
+// Flattens a page of tasks + a page of subtasks + a page of calendar
+// items (each already filtered server-side to the visible range) into
+// one list of {kind, id, taskId, name, dateDeadline, completed,
+// parentName} items — plus, for a calendar item, `dateEnd`/`location`
+// and `completed: false` always (see computeItemState: it short-
+// circuits to the 'event' state before ever looking at that flag,
+// this is just so nothing downstream trips over a missing field).
+// `dateDeadline` on a calendar item is really its start time — aliased
+// to that name so every existing day-bucketing/sorting/state helper
+// below (grouped by day, sorted within a day, etc.) already works on it
+// without a third code path. `taskNameById` resolves a subtask's parent
+// name from the already-fully-loaded TaskStoreContext (not the range-
+// filtered `tasks` array this function also receives) — that array
+// routinely excludes a due subtask's parent, which may have a
+// different deadline or none at all.
+function flattenItems(tasks, subtasks, calendarItems, taskNameById) {
   const items = []
   for (const task of tasks) {
     if (task.dateDeadline) {
@@ -192,6 +206,17 @@ function flattenItems(tasks, subtasks, taskNameById) {
       dateDeadline: subtask.dateDeadline,
       completed: subtask.completed,
       parentName: taskNameById.get(subtask.task),
+    })
+  }
+  for (const event of calendarItems) {
+    items.push({
+      kind: 'event',
+      id: event.id,
+      name: event.name,
+      dateDeadline: event.dateStart,
+      dateEnd: event.dateEnd,
+      location: event.location,
+      completed: false,
     })
   }
   return items
@@ -219,6 +244,7 @@ function groupByDay(items) {
 // convention the rest of the app uses for anything that isn't a live
 // countdown.
 function computeItemState(item, nowMs) {
+  if (item.kind === 'event') return 'event'
   if (item.completed) return 'done'
   const remaining = new Date(item.dateDeadline).getTime() - nowMs
   if (remaining <= 0) return 'overdue'
@@ -244,6 +270,14 @@ function hourLabel(hour) {
 
 function formatTime(iso) {
   return new Date(iso).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })
+}
+
+// A calendar item's own time display — a range when it has an end time
+// (most events do), otherwise just the one instant, same as any other
+// item's formatTime.
+function formatEventTime(item) {
+  if (!item.dateEnd) return formatTime(item.dateDeadline)
+  return `${formatTime(item.dateDeadline)} – ${formatTime(item.dateEnd)}`
 }
 
 // The header label above the grid — what it says depends on view type: a
@@ -689,10 +723,11 @@ function WeekView({ grid, todayKey, selectedKey, itemsByDay, nowMs, filterState,
 function DayItemRow({ item, nowMs }) {
   const navigate = useNavigate()
   const palette = STATE_PALETTE[computeItemState(item, nowMs)]
+  const isEvent = item.kind === 'event'
   return (
     <div
-      onClick={() => navigate(`/tasks/${item.taskId}`)}
-      className="flex cursor-pointer items-center gap-2.5 rounded-[9px] px-2.5 py-2 transition-colors"
+      onClick={isEvent ? undefined : () => navigate(`/tasks/${item.taskId}`)}
+      className={cn('flex items-center gap-2.5 rounded-[9px] px-2.5 py-2 transition-colors', !isEvent && 'cursor-pointer')}
       style={{ background: palette.bg, boxShadow: `inset 0 0 0 1px ${palette.border}` }}
     >
       <span aria-hidden="true" className="size-1.5 shrink-0 rounded-full" style={{ background: palette.dot }} />
@@ -708,7 +743,9 @@ function DayItemRow({ item, nowMs }) {
       >
         {item.kind}
       </span>
-      <span className="ml-auto shrink-0 text-xs font-bold tabular-nums text-[#a8a5a0]">{formatTime(item.dateDeadline)}</span>
+      <span className="ml-auto shrink-0 text-xs font-bold tabular-nums text-[#a8a5a0]">
+        {isEvent ? formatEventTime(item) : formatTime(item.dateDeadline)}
+      </span>
     </div>
   )
 }
@@ -793,10 +830,11 @@ function RailCheckbox({ checked, borderColor, onToggle, disabled }) {
   )
 }
 
-function SelectedDayRow({ item, nowMs, onToggle }) {
+function SelectedDayRow({ item, nowMs, onToggle, onDeleteEvent }) {
   const navigate = useNavigate()
   const [busy, setBusy] = useState(false)
   const palette = STATE_PALETTE[computeItemState(item, nowMs)]
+  const isEvent = item.kind === 'event'
 
   async function handleToggle() {
     setBusy(true)
@@ -807,13 +845,43 @@ function SelectedDayRow({ item, nowMs, onToggle }) {
     }
   }
 
+  // No confirmation dialog of its own — this app builds custom
+  // confirmation UI for a delete everywhere else (TaskList, ProfilePage's
+  // account deletion), but a plain window.confirm() here is a
+  // deliberate corner cut to keep this first version of calendar items
+  // small; nothing stops a later pass from replacing it with the same
+  // in-place confirm pattern those use.
+  async function handleDelete(e) {
+    e.stopPropagation()
+    if (!window.confirm(`Delete "${item.name}"?`)) return
+    setBusy(true)
+    try {
+      await onDeleteEvent(item)
+    } finally {
+      setBusy(false)
+    }
+  }
+
   return (
     <div
-      onClick={() => navigate(`/tasks/${item.taskId}`)}
-      className="flex cursor-pointer items-start gap-2.5 rounded-[11px] px-[11px] py-2.5 transition-colors"
+      onClick={isEvent ? undefined : () => navigate(`/tasks/${item.taskId}`)}
+      className={cn(
+        'flex items-start gap-2.5 rounded-[11px] px-[11px] py-2.5 transition-colors',
+        !isEvent && 'cursor-pointer'
+      )}
       style={{ background: palette.bg, boxShadow: `inset 0 0 0 1px ${palette.border}` }}
     >
-      <RailCheckbox checked={item.completed} borderColor={palette.border} onToggle={handleToggle} disabled={busy} />
+      {isEvent ? (
+        <span
+          aria-hidden="true"
+          className="mt-px flex size-[17px] shrink-0 items-center justify-center rounded-[5px]"
+          style={{ boxShadow: `inset 0 0 0 1.5px ${palette.border}` }}
+        >
+          <CalendarDays className="size-2.5" style={{ color: palette.fg }} />
+        </span>
+      ) : (
+        <RailCheckbox checked={item.completed} borderColor={palette.border} onToggle={handleToggle} disabled={busy} />
+      )}
       <div className="min-w-0 flex-1">
         <p
           className={cn('truncate text-[11px] font-bold', item.completed && 'line-through opacity-[.62]')}
@@ -821,15 +889,35 @@ function SelectedDayRow({ item, nowMs, onToggle }) {
         >
           {item.name}
         </p>
-        <p className="mt-0.5 text-[11px] font-bold text-[#a8a5a0]">
-          {item.kind === 'task' ? 'Task' : 'Subtask'} · {formatTime(item.dateDeadline)}
+        <p className="mt-0.5 truncate text-[11px] font-bold text-[#a8a5a0]">
+          {isEvent ? (
+            <>
+              Event · {formatEventTime(item)}
+              {item.location ? ` · ${item.location}` : ''}
+            </>
+          ) : (
+            <>
+              {item.kind === 'task' ? 'Task' : 'Subtask'} · {formatTime(item.dateDeadline)}
+            </>
+          )}
         </p>
       </div>
+      {isEvent && (
+        <button
+          type="button"
+          onClick={handleDelete}
+          disabled={busy}
+          aria-label={`Delete ${item.name}`}
+          className="shrink-0 text-[#a8a5a0] transition-colors hover:text-red-600 disabled:opacity-50"
+        >
+          <Trash2 className="size-3.5" aria-hidden="true" />
+        </button>
+      )}
     </div>
   )
 }
 
-function SelectedDayCard({ date, isToday, items, nowMs, loading, onToggle, canAdd, onAddClick }) {
+function SelectedDayCard({ date, isToday, items, nowMs, loading, onToggle, onDeleteEvent, canAdd, onAddClick }) {
   return (
     <div className="rounded-2xl bg-white p-[18px]" style={{ boxShadow: CARD_SHADOW }}>
       <p className="text-[11px] font-bold uppercase tracking-[.09em] text-[#a8a5a0]">
@@ -849,7 +937,7 @@ function SelectedDayCard({ date, isToday, items, nowMs, loading, onToggle, canAd
       ) : (
         <div className="mt-3.5 flex flex-col gap-2">
           {items.map((item) => (
-            <SelectedDayRow key={`${item.kind}-${item.id}`} item={item} nowMs={nowMs} onToggle={onToggle} />
+            <SelectedDayRow key={`${item.kind}-${item.id}`} item={item} nowMs={nowMs} onToggle={onToggle} onDeleteEvent={onDeleteEvent} />
           ))}
         </div>
       )}
@@ -858,7 +946,7 @@ function SelectedDayCard({ date, isToday, items, nowMs, loading, onToggle, canAd
         type="button"
         onClick={onAddClick}
         disabled={!canAdd}
-        title={canAdd ? undefined : "Can't set a deadline in the past"}
+        title={canAdd ? undefined : "Can't add something dated in the past"}
         className="mt-3.5 flex w-full items-center gap-2 rounded-[11px] px-3.5 py-2.5 text-[13px] font-bold text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-45"
         style={{
           background: 'linear-gradient(180deg,#4c3670 0%,#33224a 62%,#2b1c40 100%)',
@@ -866,7 +954,7 @@ function SelectedDayCard({ date, isToday, items, nowMs, loading, onToggle, canAd
         }}
       >
         <Plus className="size-3.5" aria-hidden="true" />
-        Add task on this day
+        Add to this day
       </button>
     </div>
   )
@@ -918,7 +1006,7 @@ export function CalendarPage() {
   const { tasks, refreshTasks } = useTaskStore()
   const { currentStreak } = computeStats(tasks).habits
   const taskNameById = useMemo(() => new Map(tasks.map((t) => [t.id, t.name])), [tasks])
-  const { setOpen: setFabOpen, setPrefillDate } = useAddTaskFab()
+  const { setOpen: setFabOpen, setPrefillDate, calendarItemsVersion } = useAddTaskFab()
 
   const now = useClock()
   const nowMs = now.getTime()
@@ -956,7 +1044,7 @@ export function CalendarPage() {
   // the shared store). Keeping the two separate means a store update
   // re-groups the already-fetched data in memory instead of re-hitting
   // the network for a range that hasn't actually changed.
-  const [rawItems, setRawItems] = useState({ tasks: [], subtasks: [] })
+  const [rawItems, setRawItems] = useState({ tasks: [], subtasks: [], events: [] })
   const [status, setStatus] = useState('loading') // 'loading' | 'ready' | 'error'
 
   const range = useMemo(
@@ -999,10 +1087,11 @@ export function CalendarPage() {
     Promise.all([
       fetchTasksDueBetween(range.start.toISOString(), range.end.toISOString()),
       fetchSubtasksDueBetween(range.start.toISOString(), range.end.toISOString()),
+      fetchCalendarItemsDueBetween(range.start.toISOString(), range.end.toISOString()),
     ])
-      .then(([tasksData, subtasksData]) => {
+      .then(([tasksData, subtasksData, calendarItemsData]) => {
         if (cancelled) return
-        setRawItems({ tasks: tasksData.results, subtasks: subtasksData.results })
+        setRawItems({ tasks: tasksData.results, subtasks: subtasksData.results, events: calendarItemsData.results })
         setStatus('ready')
       })
       .catch(() => {
@@ -1013,10 +1102,15 @@ export function CalendarPage() {
     return () => {
       cancelled = true
     }
-  }, [range])
+    // calendarItemsVersion isn't part of "what range is visible" — it's
+    // a plain refetch trigger, bumped by the FAB after creating a
+    // calendar item (see AddTaskFabContext's own comment on it), since
+    // this page has no other way to notice that happened.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [range, calendarItemsVersion])
 
   const itemsByDay = useMemo(
-    () => groupByDay(flattenItems(rawItems.tasks, rawItems.subtasks, taskNameById)),
+    () => groupByDay(flattenItems(rawItems.tasks, rawItems.subtasks, rawItems.events, taskNameById)),
     [rawItems, taskNameById]
   )
 
@@ -1138,6 +1232,18 @@ export function CalendarPage() {
       await refreshTasks()
     } catch {
       setRawItems((data) => apply(data, !checked))
+    }
+  }
+
+  // Optimistic delete, same shape as handleToggleItem above — removes
+  // it from rawItems immediately, puts it back if the request fails.
+  async function handleDeleteEvent(item) {
+    const previous = rawItems
+    setRawItems((data) => ({ ...data, events: data.events.filter((e) => e.id !== item.id) }))
+    try {
+      await deleteCalendarItem(item.id)
+    } catch {
+      setRawItems(previous)
     }
   }
 
@@ -1323,6 +1429,7 @@ export function CalendarPage() {
               nowMs={nowMs}
               loading={loading}
               onToggle={handleToggleItem}
+              onDeleteEvent={handleDeleteEvent}
               canAdd={isUpcoming}
               onAddClick={() => openAddForDay(viewingDate)}
             />
