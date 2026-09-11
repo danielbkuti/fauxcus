@@ -438,7 +438,11 @@ const GRID_COLS = '32px repeat(7,minmax(0,1fr))'
 
 // The small chevron buttons beside the week-number column and the
 // weekday header row — shared styling so the four of them (up, down,
-// left, right) read as one consistent control language.
+// left, right) read as one consistent control language. Given a resting
+// background + a darker icon (not just a faint glyph on bare page
+// background) so they read as real buttons at a glance rather than
+// nearly-invisible until hovered — same lilac-grey/hairline tokens the
+// view-switcher's own track already uses.
 function StepButton({ icon: Icon, onClick, label }) {
   return (
     <button
@@ -446,7 +450,7 @@ function StepButton({ icon: Icon, onClick, label }) {
       onClick={onClick}
       aria-label={label}
       title={label}
-      className="flex size-5 items-center justify-center rounded-[6px] text-[#b3afbd] transition-colors hover:bg-white hover:text-[#7c5fb0] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#7c5fb0]"
+      className="flex size-5 items-center justify-center rounded-[6px] bg-[#f1eff5] text-[#6b6572] shadow-[inset_0_0_0_1px_rgba(51,34,74,.08)] transition-colors hover:bg-white hover:text-[#7c5fb0] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#7c5fb0]"
     >
       <Icon className="size-3.5" aria-hidden="true" />
     </button>
@@ -478,19 +482,18 @@ function MonthGrid({
 
   return (
     <div>
-      {/* Steppers sit at opposite ends rather than clustered together:
-          up (earlier weeks) beside the header's leading corner, down
-          (later weeks) beside the last row's own week number — see the
-          weeks.map below. Left (previous month) beside Sunday (the
-          first day column now that the week starts there), right (next
-          month) beside Saturday (the last) — both live inside those
-          weekday cells rather than a 9th grid column, so they can't
-          throw off the day columns' width, which has to line up
-          exactly with the day cells in every row below. */}
+      {/* Left (previous month) beside Sunday (the first day column now
+          that the week starts there), right (next month) beside
+          Saturday (the last) — both live inside those weekday cells
+          rather than a 9th grid column, so they can't throw off the day
+          columns' width, which has to line up exactly with the day
+          cells in every row below. The header's own leading cell stays
+          empty (just weekday labels here) — up/down both live inside
+          the week-number column instead, directly above/below the
+          nearest week number (row 1 and the last row respectively, see
+          weeks.map), at the same gap on both ends. */}
       <div className="mb-2 grid items-center gap-2" style={{ gridTemplateColumns: GRID_COLS }}>
-        <div className="flex items-center justify-center">
-          <StepButton icon={ChevronUp} onClick={() => onStepWeek(-1)} label="Move the view up one week" />
-        </div>
+        <span aria-hidden="true" />
         {WEEKDAY_SHORT.map((label, i) => {
           const isFirst = i === 0
           const isLast = i === WEEKDAY_SHORT.length - 1
@@ -527,34 +530,37 @@ function MonthGrid({
         )}
       >
         {weeks.map((week, i) => {
+          const isFirstRow = i === 0
           const isLastRow = i === weeks.length - 1
           // Once the up/down stepper has actually been used, exactly one
           // row reads as "in focus" — the one now at the top of the
-          // window — with the rest dimmed toward the page's own grey
-          // ground, so the row you just scrolled to stands out from the
-          // ones still on screen around it. Left alone (hasScrolled
-          // false, the default 6-week window), every row stays at equal
-          // weight instead — dimming everything but the very first row
-          // by default would mean dimming whichever row today actually
+          // window — with the rest visibly greyed out (true desaturation,
+          // not just a faint opacity drop that a white card full of
+          // colored pills could still read as "basically the same") so
+          // the row you just scrolled to stands out from the ones still
+          // on screen around it. Left alone (hasScrolled false, the
+          // default 6-week window), every row stays at equal weight
+          // instead — dimming everything but the very first row by
+          // default would mean dimming whichever row today actually
           // falls in, which isn't the "previous weeks fade as you
           // scroll" effect this is for.
           const isFocusedRow = !hasScrolled || i === 0
           return (
             <div
               key={i}
-              className={cn(
-                'grid items-start gap-2 transition-opacity duration-300',
-                isFocusedRow ? 'opacity-100' : 'opacity-55'
-              )}
+              className={cn('grid items-start gap-2', !isFocusedRow && 'grayscale opacity-50')}
               style={{ gridTemplateColumns: GRID_COLS }}
             >
               <div className="flex flex-col items-center justify-center gap-0.5 self-stretch">
+                {isFirstRow && (
+                  <StepButton icon={ChevronUp} onClick={() => onStepWeek(-1)} label="Move the view up one week" />
+                )}
                 <button
                   type="button"
                   onClick={() => onOpenWeek(week[0].date)}
                   title={`Week ${weekNumber(week[0].date)} — view week`}
                   aria-label={`View week ${weekNumber(week[0].date)}`}
-                  className="flex h-6 w-6 items-center justify-center rounded-[6px] text-[11px] font-bold text-[#b3afbd] transition-colors hover:bg-white hover:text-[#7c5fb0] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#7c5fb0]"
+                  className="flex h-6 w-6 items-center justify-center rounded-[6px] text-[11px] font-bold text-[#8b8794] transition-colors hover:bg-white hover:text-[#7c5fb0] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#7c5fb0]"
                 >
                   {weekNumber(week[0].date)}
                 </button>
