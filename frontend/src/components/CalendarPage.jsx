@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Plus, Flame, Hammer } from 'lucide-react'
 import { fetchSubtasksDueBetween, fetchTasksDueBetween, updateSubTask, updateTask } from '@/lib/tasks'
@@ -56,12 +56,19 @@ const FILTER_CHIPS = [
 // per-user display preference.
 const MONTH_PILL_CAP = 2
 
-const TIME_BANDS = [
-  { key: 'morning', label: 'Morning' },
-  { key: 'afternoon', label: 'Afternoon' },
-  { key: 'evening', label: 'Evening' },
-  { key: 'anytime', label: 'Anytime' },
-]
+// Week/Day views lay items out on a real 24-hour grid (0-23) rather than
+// coarse Morning/Afternoon/Evening bands — one row per hour, like most
+// calendar apps' own week/day grids.
+const HOURS = Array.from({ length: 24 }, (_, h) => h)
+// Where the hourly grid's own scroll position starts — a fresh Week/Day
+// view opens already scrolled to the morning instead of midnight, same
+// default most calendar apps use. Purely a starting scroll offset: hours
+// before it are still there, one scroll away, not hidden or excluded.
+const DEFAULT_SCROLL_HOUR = 7
+// Row height in px — has to be a real number (not just a CSS class) since
+// it's also used to compute the scroll-to-DEFAULT_SCROLL_HOUR offset on
+// mount. Kept the same for both views so the two feel like one system.
+const HOUR_ROW_HEIGHT = 48
 
 function addDays(date, n) {
   const d = new Date(date)
@@ -226,17 +233,13 @@ function filterItems(items, state, nowMs) {
   return items.filter((item) => computeItemState(item, nowMs) === state)
 }
 
-// Morning/Afternoon/Evening/Anytime, per the handoff's Week/Day view
-// bands. Every deadline in this app carries a concrete time of day (see
-// lib/utils.js's formatDeadline comment), so 'anytime' never actually
-// matches anything today — the row still renders (structurally always
-// present, per the handoff), just empty, and this keeps working
-// correctly if a genuinely time-less deadline is ever introduced.
-function timeBand(item) {
-  const hour = new Date(item.dateDeadline).getHours()
-  if (hour < 12) return 'morning'
-  if (hour < 17) return 'afternoon'
-  return 'evening'
+function itemHour(item) {
+  return new Date(item.dateDeadline).getHours()
+}
+
+// "12 AM", "7 AM", "12 PM", ... — the hourly grid's own row labels.
+function hourLabel(hour) {
+  return new Date(2000, 0, 1, hour).toLocaleTimeString(undefined, { hour: 'numeric' })
 }
 
 function formatTime(iso) {
@@ -331,7 +334,7 @@ function MonthDayCell({ cell, isToday, isSelected, items, hasAnyItems, nowMs, ca
   const hasCompleted = items.some((i) => i.completed)
 
   function handleClick() {
-    if (!cell.inMonth || loading) return
+    if (loading) return
     if (hasAnyItems) {
       onSelect(cell.key)
       return
@@ -344,20 +347,17 @@ function MonthDayCell({ cell, isToday, isSelected, items, hasAnyItems, nowMs, ca
     <div className="relative min-w-0">
       <button
         type="button"
-        tabIndex={cell.inMonth ? 0 : -1}
         onClick={handleClick}
-        onDoubleClick={() => cell.inMonth && onOpenDay(cell.date)}
+        onDoubleClick={() => onOpenDay(cell.date)}
         onMouseEnter={() => setActive(true)}
         onMouseLeave={() => setActive(false)}
         onFocus={() => setActive(true)}
         onBlur={() => setActive(false)}
         style={{ minHeight: 124 }}
         className={cn(
-          'flex w-full min-w-0 flex-col rounded-[13px] p-[10px_10px_11px] text-left transition-[transform,box-shadow] motion-safe:duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#7c5fb0]',
-          !cell.inMonth && 'pointer-events-none bg-[#f6f5f8] opacity-55',
-          cell.inMonth && 'cursor-pointer bg-white shadow-[inset_0_0_0_1px_rgba(51,34,74,.07)] motion-safe:hover:-translate-y-0.5 motion-safe:hover:shadow-[inset_0_0_0_1px_rgba(51,34,74,.07),0_14px_30px_-24px_rgba(37,37,37,.55)]',
-          cell.inMonth && isToday && !isSelected && 'bg-[#faf6ff] shadow-[0_0_0_1.5px_#c3a9e8,0_10px_26px_-24px_rgba(37,37,37,.5)]',
-          cell.inMonth && isSelected && 'shadow-[0_0_0_2px_#7c5fb0,0_14px_30px_-22px_rgba(37,37,37,.6)]'
+          'flex w-full min-w-0 cursor-pointer flex-col rounded-[13px] bg-white p-[10px_10px_11px] text-left shadow-[inset_0_0_0_1px_rgba(51,34,74,.07)] transition-[transform,box-shadow] motion-safe:duration-150 motion-safe:hover:-translate-y-0.5 motion-safe:hover:shadow-[inset_0_0_0_1px_rgba(51,34,74,.07),0_14px_30px_-24px_rgba(37,37,37,.55)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#7c5fb0]',
+          isToday && !isSelected && 'bg-[#faf6ff] shadow-[0_0_0_1.5px_#c3a9e8,0_10px_26px_-24px_rgba(37,37,37,.5)]',
+          isSelected && 'shadow-[0_0_0_2px_#7c5fb0,0_14px_30px_-22px_rgba(37,37,37,.6)]'
         )}
       >
         <div className="flex items-center justify-between">
@@ -369,6 +369,14 @@ function MonthDayCell({ cell, isToday, isSelected, items, hasAnyItems, nowMs, ca
               {cell.date.getDate()}
             </span>
           ) : (
+            // The date number stays a lighter grey for a leading/trailing
+            // day from an adjacent month — a subtle "this belongs to
+            // last/next month" cue — but the cell around it is otherwise
+            // identical to an in-month one (white, fully interactive):
+            // every day the grid actually shows, in-month or not, is
+            // something the visible-weeks/grey-out treatment above (see
+            // MonthGrid's isFocusedRow) already owns the job of dimming
+            // when it's genuinely out of view, not this.
             <span
               className={cn(
                 'font-display text-[13px] font-semibold tabular-nums',
@@ -390,7 +398,7 @@ function MonthDayCell({ cell, isToday, isSelected, items, hasAnyItems, nowMs, ca
                 <ItemPill key={`${item.kind}-${item.id}`} item={item} nowMs={nowMs} />
               ))}
               {overflow > 0 && <span className="mt-[5px] text-[11px] font-bold text-[#7c5fb0]">+{overflow} more</span>}
-              {items.length === 0 && cell.inMonth && active && canAdd && (
+              {items.length === 0 && active && canAdd && (
                 <span className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-bold text-[#7c5fb0]">
                   <Plus className="size-[11px]" aria-hidden="true" />
                   Add task
@@ -523,10 +531,10 @@ function MonthGrid({
           // Reduced motion is handled in CSS (index.css), not here —
           // `motion-safe:` only works on Tailwind-recognized utility
           // classes, and these are plain custom ones.
-          scrollDirection === 'up' && 'animate-month-grid-slide-up',
-          scrollDirection === 'down' && 'animate-month-grid-slide-down',
-          scrollDirection === 'left' && 'animate-month-grid-slide-left',
-          scrollDirection === 'right' && 'animate-month-grid-slide-right'
+          scrollDirection === 'up' && 'animate-view-slide-up',
+          scrollDirection === 'down' && 'animate-view-slide-down',
+          scrollDirection === 'left' && 'animate-view-slide-left',
+          scrollDirection === 'right' && 'animate-view-slide-right'
         )}
       >
         {weeks.map((week, i) => {
@@ -597,10 +605,37 @@ function MonthGrid({
 
 const CARD_SHADOW = '0 0 0 1px rgba(51,34,74,.08), 0 18px 40px -34px rgba(37,37,37,.6)'
 
-function WeekView({ grid, todayKey, selectedKey, itemsByDay, nowMs, filterState, loading, onSelectDay, onOpenDay }) {
+const WEEK_HOUR_COLS = '64px repeat(7,minmax(0,1fr))'
+// A handful of sample hours for the loading skeleton — one skeleton bar
+// per every hour across all 24 rows would be a wall of pulsing bars, far
+// noisier than the old 4-band version ever was, for a state that's only
+// on screen briefly. This spans the default-visible morning hour plus a
+// couple either side of it, so the skeleton is actually in view without
+// needing to scroll.
+const SKELETON_SAMPLE_HOURS = new Set([DEFAULT_SCROLL_HOUR - 1, DEFAULT_SCROLL_HOUR, DEFAULT_SCROLL_HOUR + 1])
+
+function WeekView({ grid, todayKey, selectedKey, itemsByDay, nowMs, filterState, loading, slideDirection, onSelectDay, onOpenDay }) {
+  const scrollRef = useRef(null)
+  // Opens already scrolled to the morning — see DEFAULT_SCROLL_HOUR.
+  // This component remounts (a fresh instance, not just a re-render)
+  // every time Previous/Next changes which week is showing (it's keyed
+  // on navRenderKey at the call site, for the slide animation below), so
+  // a plain mount-time effect is enough to reapply this on every
+  // navigation, not just the first time the page loads.
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ top: DEFAULT_SCROLL_HOUR * HOUR_ROW_HEIGHT })
+  }, [])
+
   return (
-    <div className="overflow-hidden rounded-2xl bg-white" style={{ boxShadow: CARD_SHADOW }}>
-      <div className="grid border-b border-[#ece9f2]" style={{ gridTemplateColumns: '88px repeat(7,minmax(0,1fr))' }}>
+    <div
+      className={cn(
+        'overflow-hidden rounded-2xl bg-white',
+        slideDirection === 'left' && 'animate-view-slide-left',
+        slideDirection === 'right' && 'animate-view-slide-right'
+      )}
+      style={{ boxShadow: CARD_SHADOW }}
+    >
+      <div className="grid border-b border-[#ece9f2]" style={{ gridTemplateColumns: WEEK_HOUR_COLS }}>
         <span aria-hidden="true" />
         {grid.map((cell) => (
           <button
@@ -618,31 +653,35 @@ function WeekView({ grid, todayKey, selectedKey, itemsByDay, nowMs, filterState,
           </button>
         ))}
       </div>
-      {TIME_BANDS.map((band) => (
-        <div
-          key={band.key}
-          className="grid border-b border-[#f2eff6] last:border-b-0"
-          style={{ gridTemplateColumns: '88px repeat(7,minmax(0,1fr))' }}
-        >
-          <div className="p-[14px_12px] text-[11px] font-bold uppercase tracking-[.08em] text-[#a8a5a0]">{band.label}</div>
-          {grid.map((cell) => {
-            const items = filterItems(itemsByDay.get(cell.key) ?? [], filterState, nowMs).filter((item) => timeBand(item) === band.key)
-            return (
-              <div
-                key={cell.key}
-                className={cn(
-                  'flex min-h-[62px] flex-col gap-[5px] border-l border-[#f2eff6] p-[10px_8px]',
-                  cell.key === selectedKey && 'bg-[rgba(124,95,176,.05)]'
-                )}
-              >
-                {loading
-                  ? band.key !== 'anytime' && <Skeleton className="h-[19px] w-full max-w-[72px]" />
-                  : items.map((item) => <ItemPill key={`${item.kind}-${item.id}`} item={item} nowMs={nowMs} />)}
-              </div>
-            )
-          })}
-        </div>
-      ))}
+      <div ref={scrollRef} className="max-h-[560px] overflow-y-auto">
+        {HOURS.map((hour) => (
+          <div key={hour} className="grid border-b border-[#f2eff6] last:border-b-0" style={{ gridTemplateColumns: WEEK_HOUR_COLS }}>
+            <div
+              className="flex items-start justify-end p-[6px_10px_0_0] text-right text-[10px] font-bold uppercase tracking-[.05em] text-[#a8a5a0]"
+              style={{ minHeight: HOUR_ROW_HEIGHT }}
+            >
+              {hourLabel(hour)}
+            </div>
+            {grid.map((cell) => {
+              const items = filterItems(itemsByDay.get(cell.key) ?? [], filterState, nowMs).filter((item) => itemHour(item) === hour)
+              return (
+                <div
+                  key={cell.key}
+                  className={cn(
+                    'flex flex-col gap-[3px] border-l border-[#f2eff6] p-[6px_8px]',
+                    cell.key === selectedKey && 'bg-[rgba(124,95,176,.05)]'
+                  )}
+                  style={{ minHeight: HOUR_ROW_HEIGHT }}
+                >
+                  {loading
+                    ? SKELETON_SAMPLE_HOURS.has(hour) && <Skeleton className="h-[16px] w-full max-w-[64px]" />
+                    : items.map((item) => <ItemPill key={`${item.kind}-${item.id}`} item={item} nowMs={nowMs} />)}
+                </div>
+              )
+            })}
+          </div>
+        ))}
+      </div>
     </div>
   )
 }
@@ -674,9 +713,25 @@ function DayItemRow({ item, nowMs }) {
   )
 }
 
-function DayView({ date, items, nowMs, loading }) {
+const DAY_HOUR_ROW_HEIGHT = 56
+
+function DayView({ date, items, nowMs, loading, slideDirection }) {
+  const scrollRef = useRef(null)
+  // Same "opens scrolled to the morning, re-applies on every navigation
+  // since this remounts on each one" as WeekView — see its own comment.
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ top: DEFAULT_SCROLL_HOUR * DAY_HOUR_ROW_HEIGHT })
+  }, [])
+
   return (
-    <div className="overflow-hidden rounded-2xl bg-white" style={{ boxShadow: CARD_SHADOW }}>
+    <div
+      className={cn(
+        'overflow-hidden rounded-2xl bg-white',
+        slideDirection === 'left' && 'animate-view-slide-left',
+        slideDirection === 'right' && 'animate-view-slide-right'
+      )}
+      style={{ boxShadow: CARD_SHADOW }}
+    >
       <div className="flex items-baseline justify-between border-b border-[#ece9f2] p-[20px_22px]">
         <h2 className="m-0 font-display text-xl font-semibold tracking-[-.02em] text-[#33224a]">
           {date.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
@@ -685,26 +740,27 @@ function DayView({ date, items, nowMs, loading }) {
           {loading ? '–' : items.length} item{items.length === 1 ? '' : 's'}
         </span>
       </div>
-      {TIME_BANDS.map((band) => {
-        const bandItems = items.filter((item) => timeBand(item) === band.key)
-        return (
-          <div key={band.key} className="grid min-h-[76px] border-b border-[#f2eff6] last:border-b-0" style={{ gridTemplateColumns: '120px 1fr' }}>
-            <div className="p-[18px_22px] text-[11px] font-bold uppercase tracking-[.08em] text-[#a8a5a0]">{band.label}</div>
-            <div className="flex flex-col justify-center gap-[7px] p-[14px_22px_16px]">
-              {loading ? (
-                band.key !== 'anytime' && <Skeleton className="h-8 w-full max-w-[260px] rounded-[9px]" />
-              ) : (
-                <>
-                  {bandItems.length === 0 && <span className="text-xs text-[#c9c6d1]">—</span>}
-                  {bandItems.map((item) => (
-                    <DayItemRow key={`${item.kind}-${item.id}`} item={item} nowMs={nowMs} />
-                  ))}
-                </>
-              )}
+      <div ref={scrollRef} className="max-h-[600px] overflow-y-auto">
+        {HOURS.map((hour) => {
+          const hourItems = items.filter((item) => itemHour(item) === hour)
+          return (
+            <div
+              key={hour}
+              className="grid border-b border-[#f2eff6] last:border-b-0"
+              style={{ gridTemplateColumns: '90px 1fr', minHeight: DAY_HOUR_ROW_HEIGHT }}
+            >
+              <div className="p-[10px_22px_0_0] text-right text-[11px] font-bold uppercase tracking-[.06em] text-[#a8a5a0]">
+                {hourLabel(hour)}
+              </div>
+              <div className="flex flex-col justify-center gap-[7px] p-[8px_22px]">
+                {loading
+                  ? SKELETON_SAMPLE_HOURS.has(hour) && <Skeleton className="h-8 w-full max-w-[260px] rounded-[9px]" />
+                  : hourItems.map((item) => <DayItemRow key={`${item.kind}-${item.id}`} item={item} nowMs={nowMs} />)}
+              </div>
             </div>
-          </div>
-        )
-      })}
+          )
+        })}
+      </div>
     </div>
   )
 }
@@ -878,19 +934,22 @@ export function CalendarPage() {
   // a different month or switch to Week view (that's still what
   // clicking a week number itself, or double-clicking a day, do).
   const [monthWeekOffset, setMonthWeekOffset] = useState(0)
-  // Which way the grid most recently moved ('up' | 'down' | 'left' |
-  // 'right' | null) — up/down from the week-number stepper (scrolls the
-  // window, stays in Month view), left/right from Previous/Next month —
-  // drives which slide-in animation plays next. `monthGridRenderKey` is
-  // the thing that actually triggers the replay: it's bumped on every
-  // one of those four presses (see stepMonthWindow, goToPrevious,
-  // goToNext) and used as MonthGrid's remount key, independently of
-  // whether monthWeekOffset's own value happens to net out the same as
-  // before (e.g. Next month always resets the offset to 0 — if it was
-  // already 0, that alone wouldn't change, and a keyed-on-offset remount
-  // would silently skip the animation).
-  const [monthScrollDirection, setMonthScrollDirection] = useState(null)
-  const [monthGridRenderKey, setMonthGridRenderKey] = useState(0)
+  // Which way the visible view most recently moved ('up' | 'down' |
+  // 'left' | 'right' | null) — up/down only ever comes from the month
+  // grid's own week-number stepper (scrolls its window, stays in Month
+  // view); left/right comes from Previous/Next, in any of the three
+  // views (a month, a week, or a day). Drives which slide-in animation
+  // plays next, on whichever of MonthGrid/WeekView/DayView is currently
+  // mounted. `navRenderKey` is the thing that actually triggers the
+  // replay: it's bumped on every one of those presses (see
+  // stepMonthWindow, goToPrevious, goToNext) and used as that view's
+  // own remount key — for Month specifically, independently of whether
+  // monthWeekOffset's own value happens to net out the same as before
+  // (e.g. Next month always resets that offset to 0 — if it was already
+  // 0, that alone wouldn't change, and a keyed-on-offset remount would
+  // silently skip the animation).
+  const [navSlideDirection, setNavSlideDirection] = useState(null)
+  const [navRenderKey, setNavRenderKey] = useState(0)
   // Raw fetch results, not the grouped-by-day form — grouping also needs
   // taskNameById (a subtask's parent name), which changes independently
   // of the visible range (any task mutation anywhere in the app updates
@@ -913,8 +972,8 @@ export function CalendarPage() {
   // jumping to a different month (Previous/Next/Today) or leaving and
   // coming back to Month view should land on that month's own default
   // window, not wherever the grid happened to be scrolled to before.
-  // Deliberately doesn't touch monthScrollDirection/monthGridRenderKey
-  // here — goToPrevious/goToNext already set both, in the same tick as
+  // Deliberately doesn't touch navSlideDirection/navRenderKey here —
+  // goToPrevious/goToNext already set both, in the same tick as
   // the anchorDate change that triggers this effect, and resetting them
   // again on the next tick (after that first frame has already painted
   // and started the animation) would cut it short instead of letting it
@@ -1007,14 +1066,10 @@ export function CalendarPage() {
   }, [tasks, todayKey])
 
   function goToPrevious() {
-    // Only Month view has its own grid-scoped slide animation (the hero's
-    // Previous/Next chevrons that call this for Week/Day view are a
-    // separate control with no equivalent grid to animate) — guarding on
-    // viewType here means this is a no-op the other two views.
-    if (viewType === 'month') {
-      setMonthScrollDirection('left')
-      setMonthGridRenderKey((k) => k + 1)
-    }
+    // All three views slide horizontally on Previous/Next — see
+    // MonthGrid/WeekView/DayView, each keyed on navRenderKey.
+    setNavSlideDirection('left')
+    setNavRenderKey((k) => k + 1)
     setAnchorDate((current) => {
       if (viewType === 'day') return addDays(current, -1)
       if (viewType === 'week') return addDays(current, -7)
@@ -1023,10 +1078,8 @@ export function CalendarPage() {
   }
 
   function goToNext() {
-    if (viewType === 'month') {
-      setMonthScrollDirection('right')
-      setMonthGridRenderKey((k) => k + 1)
-    }
+    setNavSlideDirection('right')
+    setNavRenderKey((k) => k + 1)
     setAnchorDate((current) => {
       if (viewType === 'day') return addDays(current, 1)
       if (viewType === 'week') return addDays(current, 7)
@@ -1050,8 +1103,8 @@ export function CalendarPage() {
   // or viewType: unlike clicking a week number (goToWeek, above), this
   // never jumps to Week view — it just scrolls the same month grid.
   function stepMonthWindow(direction) {
-    setMonthScrollDirection(direction < 0 ? 'up' : 'down')
-    setMonthGridRenderKey((k) => k + 1)
+    setNavSlideDirection(direction < 0 ? 'up' : 'down')
+    setNavRenderKey((k) => k + 1)
     setMonthWeekOffset((offset) => offset + direction)
   }
 
@@ -1230,14 +1283,15 @@ export function CalendarPage() {
                 onOpenWeek={goToWeek}
                 onAddDay={openAddForDay}
                 onStepWeek={stepMonthWindow}
-                renderKey={monthGridRenderKey}
+                renderKey={navRenderKey}
                 hasScrolled={monthWeekOffset !== 0}
-                scrollDirection={monthScrollDirection}
+                scrollDirection={navSlideDirection}
                 onPreviousMonth={goToPrevious}
                 onNextMonth={goToNext}
               />
             ) : viewType === 'week' ? (
               <WeekView
+                key={navRenderKey}
                 grid={grid}
                 todayKey={todayKey}
                 selectedKey={selectedKey}
@@ -1245,15 +1299,18 @@ export function CalendarPage() {
                 nowMs={nowMs}
                 filterState={activeFilterState}
                 loading={loading}
+                slideDirection={navSlideDirection}
                 onSelectDay={setSelectedKey}
                 onOpenDay={goToDay}
               />
             ) : (
               <DayView
+                key={navRenderKey}
                 date={anchorDate}
                 items={filterItems(itemsByDay.get(selectedKey) ?? [], activeFilterState, nowMs)}
                 nowMs={nowMs}
                 loading={loading}
+                slideDirection={navSlideDirection}
               />
             )}
           </div>

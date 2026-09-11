@@ -603,37 +603,38 @@
   }
 }
 
-/* --- CalendarPage: month grid navigation ---------------------------------
-   Plays once (no `infinite`) each time the month grid's steppers move it —
-   up/down (the week-number column's own stepper, scrolls the window by a
-   row) or left/right (Previous/Next month) — a short slide-in-and-settle
-   rather than the grid just cutting to the new set of rows. */
-@keyframes month-grid-slide-up {
+/* --- CalendarPage: view navigation ---------------------------------------
+   Plays once (no `infinite`) each time Previous/Next or the month grid's
+   own week-number stepper moves the visible view — up/down only from that
+   stepper (Month view only, scrolls its window by a row), left/right from
+   Previous/Next in any of the three views (Month, Week, or Day) — a short
+   slide-in-and-settle rather than the view just cutting to its new content. */
+@keyframes view-slide-up {
   from { transform: translateY(10px); opacity: 0.4; }
   to { transform: translateY(0); opacity: 1; }
 }
-@keyframes month-grid-slide-down {
+@keyframes view-slide-down {
   from { transform: translateY(-10px); opacity: 0.4; }
   to { transform: translateY(0); opacity: 1; }
 }
-@keyframes month-grid-slide-left {
+@keyframes view-slide-left {
   from { transform: translateX(-14px); opacity: 0.4; }
   to { transform: translateX(0); opacity: 1; }
 }
-@keyframes month-grid-slide-right {
+@keyframes view-slide-right {
   from { transform: translateX(14px); opacity: 0.4; }
   to { transform: translateX(0); opacity: 1; }
 }
-.animate-month-grid-slide-up { animation: month-grid-slide-up 220ms ease-out; }
-.animate-month-grid-slide-down { animation: month-grid-slide-down 220ms ease-out; }
-.animate-month-grid-slide-left { animation: month-grid-slide-left 220ms ease-out; }
-.animate-month-grid-slide-right { animation: month-grid-slide-right 220ms ease-out; }
+.animate-view-slide-up { animation: view-slide-up 220ms ease-out; }
+.animate-view-slide-down { animation: view-slide-down 220ms ease-out; }
+.animate-view-slide-left { animation: view-slide-left 220ms ease-out; }
+.animate-view-slide-right { animation: view-slide-right 220ms ease-out; }
 
 @media (prefers-reduced-motion: reduce) {
-  .animate-month-grid-slide-up,
-  .animate-month-grid-slide-down,
-  .animate-month-grid-slide-left,
-  .animate-month-grid-slide-right {
+  .animate-view-slide-up,
+  .animate-view-slide-down,
+  .animate-view-slide-left,
+  .animate-view-slide-right {
     animation: none;
   }
 }
