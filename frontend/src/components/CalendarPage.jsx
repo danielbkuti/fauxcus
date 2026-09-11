@@ -104,10 +104,21 @@ function isoWeekNumber(date) {
 // `anchor` — including the leading/trailing days from the adjacent
 // months needed to fill the first and last week. Always 42 cells so the
 // grid's height never jumps between months.
-function buildMonthGrid(anchor) {
+//
+// `weekOffset` shifts the whole 6-week window by that many weeks
+// without touching what counts as "in month" — that's still decided
+// against `anchor`'s own month, not wherever the window has scrolled
+// to. That's the month view's up/down stepper (see StepButton/
+// stepMonthWindow in CalendarPage): it slides the visible weeks by one
+// row at a time while staying in month view, rather than jumping to a
+// different calendar month or switching to Week view. Cells further
+// from `anchor`'s month just dim more as you go — there's no longer a
+// single month that "owns" a window once it's been scrolled away from
+// the default one.
+function buildMonthGrid(anchor, weekOffset = 0) {
   const firstOfMonth = new Date(anchor.getFullYear(), anchor.getMonth(), 1)
   const firstWeekday = (firstOfMonth.getDay() + 6) % 7 // Mon=0 ... Sun=6
-  const gridStart = addDays(firstOfMonth, -firstWeekday)
+  const gridStart = addDays(firstOfMonth, -firstWeekday + weekOffset * 7)
   return Array.from({ length: 42 }, (_, i) => {
     const date = addDays(gridStart, i)
     return { date, key: localDayKey(date), inMonth: date.getMonth() === anchor.getMonth() }
@@ -125,8 +136,13 @@ function buildWeekGrid(anchor) {
 }
 
 // The fetch/selection boundary for whatever's currently visible —
-// [start, end), end exclusive — driven by view type + anchor date.
-function computeVisibleRange(viewType, anchorDate) {
+// [start, end), end exclusive — driven by view type + anchor date (and,
+// for month view, however far its grid has been scrolled — see
+// buildMonthGrid). Scrolling the month grid to weeks outside the
+// original fetch is exactly why this depends on `monthWeekOffset` too:
+// it keeps `range` (and therefore the fetch effect and the loading
+// skeletons it drives) in sync with whatever's actually on screen.
+function computeVisibleRange(viewType, anchorDate, monthWeekOffset = 0) {
   if (viewType === 'day') {
     const start = startOfDay(anchorDate)
     return { start, end: addDays(start, 1) }
@@ -135,7 +151,7 @@ function computeVisibleRange(viewType, anchorDate) {
     const cells = buildWeekGrid(anchorDate)
     return { start: cells[0].date, end: addDays(cells[6].date, 1) }
   }
-  const cells = buildMonthGrid(anchorDate)
+  const cells = buildMonthGrid(anchorDate, monthWeekOffset)
   return { start: cells[0].date, end: addDays(cells[cells.length - 1].date, 1) }
 }
 
@@ -447,6 +463,8 @@ function MonthGrid({
   onOpenWeek,
   onAddDay,
   onStepWeek,
+  monthWeekOffset,
+  scrollDirection,
   onPreviousMonth,
   onNextMonth,
 }) {
@@ -455,69 +473,89 @@ function MonthGrid({
 
   return (
     <div>
-      {/* The week-number column's up/down stepper sits once, here in the
-          header's own leading cell (not repeated per row) — "move the
-          view up/down one week" jumps straight to Week view for the
-          adjacent week, the same destination clicking a row's own week
-          number already jumps to, just relative to whatever's on screen
-          rather than a specific row. The weekday row's left/right
-          stepper lives inside the last (Sunday) cell instead of a 9th
-          grid column, so it can't throw off the day columns' width —
-          those need to line up exactly with the day cells in every row
-          below. */}
+      {/* Steppers sit at opposite ends rather than clustered together:
+          up (earlier weeks) beside the header's leading corner, down
+          (later weeks) beside the last row's own week number — see the
+          weeks.map below. Right (next month) beside Monday, left
+          (previous month) beside Sunday — the two live inside those
+          weekday cells rather than a 9th grid column, so they can't
+          throw off the day columns' width, which has to line up
+          exactly with the day cells in every row below. */}
       <div className="mb-2 grid grid-cols-[28px_repeat(7,minmax(0,1fr))] items-center gap-2">
-        <div className="flex flex-col items-center justify-center gap-0.5">
+        <div className="flex items-center justify-center">
           <StepButton icon={ChevronUp} onClick={() => onStepWeek(-1)} label="Move the view up one week" />
-          <StepButton icon={ChevronDown} onClick={() => onStepWeek(1)} label="Move the view down one week" />
         </div>
         {WEEKDAY_SHORT.map((label, i) => {
+          const isFirst = i === 0
           const isLast = i === WEEKDAY_SHORT.length - 1
           return (
-            <div key={label} className={cn('flex items-center', isLast ? 'justify-between gap-1' : 'justify-center')}>
+            <div key={label} className={cn('flex items-center gap-1', isFirst || isLast ? 'justify-between' : 'justify-center')}>
+              {isFirst && <StepButton icon={ChevronRight} onClick={onNextMonth} label="Next month" />}
               <span className="text-center text-[11px] font-bold uppercase tracking-[.09em] text-[#a8a5a0]">{label}</span>
-              {isLast && (
-                <div className="flex items-center gap-0.5">
-                  <StepButton icon={ChevronLeft} onClick={onPreviousMonth} label="Previous month" />
-                  <StepButton icon={ChevronRight} onClick={onNextMonth} label="Next month" />
-                </div>
-              )}
+              {isLast && <StepButton icon={ChevronLeft} onClick={onPreviousMonth} label="Previous month" />}
             </div>
           )
         })}
       </div>
-      <div className="flex flex-col gap-2">
-        {weeks.map((week, i) => (
-          <div key={i} className="grid grid-cols-[28px_repeat(7,minmax(0,1fr))] items-start gap-2">
-            <button
-              type="button"
-              onClick={() => onOpenWeek(week[0].date)}
-              title={`Week ${isoWeekNumber(week[0].date)} — view week`}
-              aria-label={`View week ${isoWeekNumber(week[0].date)}`}
-              className="mt-2 flex h-6 items-center justify-center rounded-[6px] text-[11px] font-bold text-[#b3afbd] transition-colors hover:bg-white hover:text-[#7c5fb0] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#7c5fb0]"
-            >
-              {isoWeekNumber(week[0].date)}
-            </button>
-            {week.map((cell) => {
-              const allItems = itemsByDay.get(cell.key) ?? []
-              return (
-                <MonthDayCell
-                  key={cell.key}
-                  cell={cell}
-                  isToday={cell.key === todayKey}
-                  isSelected={cell.key === selectedKey}
-                  items={filterItems(allItems, filterState, nowMs)}
-                  hasAnyItems={allItems.length > 0}
-                  nowMs={nowMs}
-                  canAdd={cell.date >= todayStart}
-                  loading={loading}
-                  onSelect={onSelectDay}
-                  onOpenDay={onOpenDay}
-                  onAdd={onAddDay}
-                />
-              )
-            })}
-          </div>
-        ))}
+      {/* Keyed on monthWeekOffset so every up/down press remounts this
+          wrapper and replays its slide-in animation from scratch — a
+          freshly-mounted element always starts at its own 0% keyframe,
+          same "remount to reset" trick Dashboard's hover-gated preview
+          rows use. `overflow-hidden` just clips the brief in-transit
+          offset so the grid can't visually poke into the toolbar above
+          it mid-slide; it doesn't clip anything once the animation
+          settles back to translateY(0). */}
+      <div
+        key={monthWeekOffset}
+        className={cn(
+          'flex flex-col gap-2 overflow-hidden',
+          // Reduced motion is handled in CSS (index.css), not here —
+          // `motion-safe:` only works on Tailwind-recognized utility
+          // classes, and this is a plain custom one.
+          scrollDirection === 'up' && 'animate-month-grid-slide-up',
+          scrollDirection === 'down' && 'animate-month-grid-slide-down'
+        )}
+      >
+        {weeks.map((week, i) => {
+          const isLastRow = i === weeks.length - 1
+          return (
+            <div key={i} className="grid grid-cols-[28px_repeat(7,minmax(0,1fr))] items-start gap-2">
+              <div className="mt-2 flex flex-col items-center justify-center gap-0.5">
+                <button
+                  type="button"
+                  onClick={() => onOpenWeek(week[0].date)}
+                  title={`Week ${isoWeekNumber(week[0].date)} — view week`}
+                  aria-label={`View week ${isoWeekNumber(week[0].date)}`}
+                  className="flex h-6 w-6 items-center justify-center rounded-[6px] text-[11px] font-bold text-[#b3afbd] transition-colors hover:bg-white hover:text-[#7c5fb0] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#7c5fb0]"
+                >
+                  {isoWeekNumber(week[0].date)}
+                </button>
+                {isLastRow && (
+                  <StepButton icon={ChevronDown} onClick={() => onStepWeek(1)} label="Move the view down one week" />
+                )}
+              </div>
+              {week.map((cell) => {
+                const allItems = itemsByDay.get(cell.key) ?? []
+                return (
+                  <MonthDayCell
+                    key={cell.key}
+                    cell={cell}
+                    isToday={cell.key === todayKey}
+                    isSelected={cell.key === selectedKey}
+                    items={filterItems(allItems, filterState, nowMs)}
+                    hasAnyItems={allItems.length > 0}
+                    nowMs={nowMs}
+                    canAdd={cell.date >= todayStart}
+                    loading={loading}
+                    onSelect={onSelectDay}
+                    onOpenDay={onOpenDay}
+                    onAdd={onAddDay}
+                  />
+                )
+              })}
+            </div>
+          )
+        })}
       </div>
     </div>
   )
@@ -798,6 +836,18 @@ export function CalendarPage() {
   const [anchorDate, setAnchorDate] = useState(() => startOfDay(now))
   const [selectedKey, setSelectedKey] = useState(() => localDayKey(now))
   const [filter, setFilter] = useState('all')
+  // How many weeks the month grid's own visible window has been
+  // scrolled up/down from its default (anchor month's) position — see
+  // buildMonthGrid. Stepping this does NOT touch anchorDate or
+  // viewType: the up/down stepper beside the week-number column moves
+  // the grid by one row while staying in Month view, it doesn't jump to
+  // a different month or switch to Week view (that's still what
+  // clicking a week number itself, or double-clicking a day, do).
+  const [monthWeekOffset, setMonthWeekOffset] = useState(0)
+  // Which way the grid most recently scrolled ('up' | 'down' | null) —
+  // drives which slide-in animation plays next; see stepMonthWindow and
+  // MonthGrid's own remount-to-replay trick.
+  const [monthScrollDirection, setMonthScrollDirection] = useState(null)
   // Raw fetch results, not the grouped-by-day form — grouping also needs
   // taskNameById (a subtask's parent name), which changes independently
   // of the visible range (any task mutation anywhere in the app updates
@@ -807,11 +857,23 @@ export function CalendarPage() {
   const [rawItems, setRawItems] = useState({ tasks: [], subtasks: [] })
   const [status, setStatus] = useState('loading') // 'loading' | 'ready' | 'error'
 
-  const range = useMemo(() => computeVisibleRange(viewType, anchorDate), [viewType, anchorDate])
+  const range = useMemo(
+    () => computeVisibleRange(viewType, anchorDate, monthWeekOffset),
+    [viewType, anchorDate, monthWeekOffset]
+  )
   const grid = useMemo(() => {
     if (viewType === 'day') return null
-    return viewType === 'week' ? buildWeekGrid(anchorDate) : buildMonthGrid(anchorDate)
-  }, [viewType, anchorDate])
+    return viewType === 'week' ? buildWeekGrid(anchorDate) : buildMonthGrid(anchorDate, monthWeekOffset)
+  }, [viewType, anchorDate, monthWeekOffset])
+
+  // The month grid's scroll position is specific to a given month/view —
+  // jumping to a different month (Previous/Next/Today) or leaving and
+  // coming back to Month view should land on that month's own default
+  // window, not wherever the grid happened to be scrolled to before.
+  useEffect(() => {
+    setMonthWeekOffset(0)
+    setMonthScrollDirection(null)
+  }, [anchorDate, viewType])
 
   // Keeps the selected day in sync with whatever range is actually on
   // screen — without this, switching view type or navigating away from
@@ -922,13 +984,14 @@ export function CalendarPage() {
     setViewType('week')
   }
 
-  // The month grid's own week-number stepper (beside its header's
-  // leading cell) — jumps straight to Week view for the week one step
-  // before/after whatever's currently anchored, direction -1 (up) or 1
-  // (down). Same destination as clicking a row's own week number, just
-  // relative to the current anchor instead of a specific row.
-  function stepWeek(direction) {
-    goToWeek(addDays(anchorDate, direction * 7))
+  // The month grid's own up/down stepper — slides the grid's visible
+  // window by one week (direction -1 = up/earlier, 1 = down/later)
+  // while staying in Month view. Deliberately doesn't touch anchorDate
+  // or viewType: unlike clicking a week number (goToWeek, above), this
+  // never jumps to Week view — it just scrolls the same month grid.
+  function stepMonthWindow(direction) {
+    setMonthScrollDirection(direction < 0 ? 'up' : 'down')
+    setMonthWeekOffset((offset) => offset + direction)
   }
 
   // Opens the FAB's own menu with that day carried along as
@@ -1105,7 +1168,9 @@ export function CalendarPage() {
                 onOpenDay={goToDay}
                 onOpenWeek={goToWeek}
                 onAddDay={openAddForDay}
-                onStepWeek={stepWeek}
+                onStepWeek={stepMonthWindow}
+                monthWeekOffset={monthWeekOffset}
+                scrollDirection={monthScrollDirection}
                 onPreviousMonth={goToPrevious}
                 onNextMonth={goToNext}
               />

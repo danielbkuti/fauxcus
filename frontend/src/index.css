@@ -602,3 +602,25 @@
     transition: none;
   }
 }
+
+/* --- CalendarPage: month grid week-scroll ------------------------------
+   Plays once (no `infinite`) each time the month grid's up/down stepper
+   shifts its visible window by a week — a short slide-in-and-settle
+   rather than the grid just cutting to the new set of rows. */
+@keyframes month-grid-slide-up {
+  from { transform: translateY(10px); opacity: 0.4; }
+  to { transform: translateY(0); opacity: 1; }
+}
+@keyframes month-grid-slide-down {
+  from { transform: translateY(-10px); opacity: 0.4; }
+  to { transform: translateY(0); opacity: 1; }
+}
+.animate-month-grid-slide-up { animation: month-grid-slide-up 220ms ease-out; }
+.animate-month-grid-slide-down { animation: month-grid-slide-down 220ms ease-out; }
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-month-grid-slide-up,
+  .animate-month-grid-slide-down {
+    animation: none;
+  }
+}
