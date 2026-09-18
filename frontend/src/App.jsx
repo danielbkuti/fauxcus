@@ -54,9 +54,17 @@ function AuthLayout({ children }) {
         <Logo variant="black" scale="secondary" />
       </Link>
       {children}
+      {/* Real destinations, not placeholders — "..." literally was the
+          href before (a dead link, not filler text). No in-app contact
+          form or about page exists, so these point at what actually
+          does: the repo's issues for contact, its README for about. */}
       <div className="absolute bottom-0 left-0 flex w-full justify-center gap-6 bg-[#f8f9fa] p-4 text-sm">
-        <a href="...">Contact Us</a>
-        <a href="...">About</a>
+        <a href="https://github.com/danielbkuti/fauxcus/issues" target="_blank" rel="noopener noreferrer">
+          Contact Us
+        </a>
+        <a href="https://github.com/danielbkuti/fauxcus" target="_blank" rel="noopener noreferrer">
+          About
+        </a>
       </div>
     </div>
   )
