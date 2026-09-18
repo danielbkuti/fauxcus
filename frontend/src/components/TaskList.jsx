@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { ListChecks, SquarePlus, X } from 'lucide-react'
 import { TaskCard, SubtaskStackCard } from '@/components/TaskCard'
-import { OverdueGateModal, collectOverdueItems } from '@/components/OverdueGateModal'
+import { OverdueBanner, collectOverdueItems } from '@/components/OverdueBanner'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { updateTask, deleteTask, createSubTask, updateSubTask, deleteSubTask } from '@/lib/tasks'
@@ -100,10 +100,10 @@ export function TaskList() {
   // directly (see renderEntry) — whichever one of the two a given
   // subtask wasn't clicked from still needs to see it celebrating.
   const [celebratingSubtaskIds, setCelebratingSubtaskIds] = useState(() => new Set())
-  const [showOverdueGate, setShowOverdueGate] = useState(false)
-  // Guards the overdue gate to a one-time check per page load — without
+  const [showOverdueBanner, setShowOverdueBanner] = useState(false)
+  // Guards the overdue banner to a one-time check per page load — without
   // it, every subsequent task mutation (checking something off, adding
-  // a subtask) would re-fetch `tasks` and re-open the modal the user
+  // a subtask) would re-fetch `tasks` and re-show the banner the user
   // just dismissed.
   const overdueCheckedRef = useRef(false)
   const [sortMode, setSortMode] = useState('due')
@@ -127,7 +127,7 @@ export function TaskList() {
   useEffect(() => {
     if (status !== 'ready' || overdueCheckedRef.current) return
     overdueCheckedRef.current = true
-    if (collectOverdueItems(tasks).length > 0) setShowOverdueGate(true)
+    if (collectOverdueItems(tasks).length > 0) setShowOverdueBanner(true)
   }, [status, tasks])
 
   // Optimistic: flip the checkbox immediately rather than waiting on the
@@ -389,7 +389,6 @@ export function TaskList() {
           onToggleSubtask={handleToggleSubtask}
           onSetSubtaskDeadline={handleSetSubtaskDeadline}
           onDeleteSubtask={handleDeleteSubtask}
-          pulseReady={!showOverdueGate}
           selectMode={selectMode}
           selected={selectedIds.has(task.id)}
           onSelectToggle={() => toggleSelected(task.id)}
@@ -465,7 +464,6 @@ export function TaskList() {
           onToggleComplete={(checked) => handleToggleSubtask(task, subtask, checked)}
           onSetDeadline={(dateDeadline) => handleSetSubtaskDeadline(task, subtask, dateDeadline)}
           onDelete={() => handleDeleteSubtask(task, subtask)}
-          pulseReady={!showOverdueGate}
         />
       </div>
     )
@@ -483,13 +481,13 @@ export function TaskList() {
 
   return (
     <div className="flex flex-col gap-6">
-      {showOverdueGate && (
-        <OverdueGateModal
+      {showOverdueBanner && (
+        <OverdueBanner
           overdueItems={collectOverdueItems(tasks)}
-          onDismiss={() => setShowOverdueGate(false)}
+          onDismiss={() => setShowOverdueBanner(false)}
           onReview={() => {
             setFilterMode('overdue')
-            setShowOverdueGate(false)
+            setShowOverdueBanner(false)
           }}
         />
       )}

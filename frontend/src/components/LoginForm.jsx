@@ -90,6 +90,7 @@ export function LoginForm({ onLoginSuccess }) {
               onFocus={() => setFocusedField('username')}
               onBlur={() => setFocusedField((f) => (f === 'username' ? null : f))}
               autoComplete="username"
+              spellCheck={false}
               className="border-0 bg-transparent p-0 text-sm text-black outline-none"
               required
             />

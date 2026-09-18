@@ -8,6 +8,14 @@ import { cn } from '@/lib/utils'
 // the gap it leaves between itself and whatever it's anchored to.
 const EDGE_GAP = 8
 
+// Standard focusable-element query for the Tab trap below — everything
+// this popover ever actually contains (WheelPicker's own `tabIndex={0}`
+// listbox root, the Checkbox, plain `<button>`s) is covered by this,
+// and it deliberately excludes the popover's own `tabIndex={-1}` root
+// (the initial-focus landing spot, not a stop in the cycle itself).
+const FOCUSABLE_SELECTOR =
+  'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])'
+
 const DAY_MS = 24 * 60 * 60 * 1000
 // Wheel range: 90 days back (room to backdate/correct) to 10 years
 // ahead by default — expressed as a min/max Date the day/month/year
@@ -198,13 +206,55 @@ export function DeadlineEditor({
   }, [hasTime, anchorRef])
 
   // Closes on Escape — the overlay below handles every other way out.
+  // Tab/Shift+Tab is trapped inside the popover: a portal appends this
+  // straight to the end of `document.body`, disconnected in the DOM
+  // from the anchor that opened it, so without this Tab would walk
+  // straight into whatever's dimmed behind the backdrop instead of
+  // wrapping back around inside the (visually) only thing on screen.
   useEffect(() => {
     function handleKeyDown(e) {
-      if (e.key === 'Escape') onCancel()
+      if (e.key === 'Escape') {
+        onCancel()
+        return
+      }
+      if (e.key !== 'Tab') return
+      const popover = popoverRef.current
+      if (!popover) return
+      const focusable = Array.from(popover.querySelectorAll(FOCUSABLE_SELECTOR))
+      if (focusable.length === 0) return
+      const first = focusable[0]
+      const last = focusable[focusable.length - 1]
+      // Active element is the popover's own tabIndex={-1} root right
+      // after open (see the initial-focus effect below) — neither
+      // "first" nor "last" of the real focusable list, so it needs its
+      // own branch: Tab should land on the first control, Shift+Tab
+      // should wrap to the last one, same as leaving either end of the
+      // real cycle.
+      const active = document.activeElement
+      if (e.shiftKey && (active === first || active === popover)) {
+        e.preventDefault()
+        last.focus()
+      } else if (!e.shiftKey && (active === last || active === popover)) {
+        e.preventDefault()
+        first.focus()
+      }
     }
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [onCancel])
+
+  // Moves focus into the popover itself once it's actually positioned
+  // (not before — an element still `visibility: hidden` for that first
+  // measurement frame can't take focus in most browsers). Runs once per
+  // mount: `didFocusRef` guards it from re-firing on every later
+  // reposition (scroll/resize) that also updates `coords`.
+  const didFocusRef = useRef(false)
+  useEffect(() => {
+    if (coords && !didFocusRef.current) {
+      didFocusRef.current = true
+      popoverRef.current?.focus()
+    }
+  }, [coords])
 
   function buildYearItems() {
     const items = []
@@ -328,6 +378,10 @@ export function DeadlineEditor({
       />
       <div
         ref={popoverRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Edit deadline"
+        tabIndex={-1}
         onClick={(e) => e.stopPropagation()}
         style={{
           position: 'fixed',
@@ -335,7 +389,7 @@ export function DeadlineEditor({
           left: coords ? `${coords.left}px` : 0,
           visibility: coords ? 'visible' : 'hidden',
         }}
-        className={cn('z-[70] w-64 rounded-lg border bg-card p-3 text-left shadow-lg', className)}
+        className={cn('z-[70] w-64 rounded-lg border bg-card p-3 text-left shadow-lg outline-none', className)}
       >
       <p className="text-center text-xs font-medium tabular-nums text-muted-foreground">
         Date: {pad2(day)}/{pad2(month)}/{year}

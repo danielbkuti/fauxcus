@@ -42,6 +42,7 @@ export function InlineEditableName({ value, onSave, textClassName, inputClassNam
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             autoFocus
+            aria-label={`Rename "${value}"`}
             className={cn(
               'rounded-md border border-input bg-transparent px-2 py-1 outline-none focus-visible:border-ring',
               inputClassName

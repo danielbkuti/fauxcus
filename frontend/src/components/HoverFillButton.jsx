@@ -7,7 +7,7 @@ const PROGRESS_GRADIENT = 'bg-gradient-to-r from-[#e0c3fc] via-[#7c5fb0] to-[#8e
 // A button whose gradient sweeps in from the left on hover — the same
 // "completion" fill as the task list's Pending -> Complete button,
 // generalized for reuse anywhere that sweep reads as "commit to this."
-// Currently just the overdue gate's Review button: dismissing it is
+// Currently just the overdue banner's Review button: dismissing it is
 // its own small act of acknowledgment, so it gets the same fill.
 export function HoverFillButton({ children, onClick, className }) {
   const [hoverFilled, setHoverFilled] = useState(false)

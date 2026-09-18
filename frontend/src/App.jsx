@@ -21,6 +21,7 @@ import { Footer } from '@/components/Footer'
 import { AddTaskFab } from '@/components/AddTaskFab'
 import { TaskStoreProvider } from '@/context/TaskStoreContext'
 import { AddTaskFabProvider } from '@/context/AddTaskFabContext'
+import { Skeleton } from '@/components/ui/skeleton'
 import { checkAuth, logout } from '@/lib/auth'
 
 // Wraps every public route (landing, login, signup, verify) so the
@@ -149,9 +150,32 @@ function App() {
   }
 
   if (authState === 'loading') {
+    // Shape guess: a nav bar + content block, since a return visit
+    // (the common case for a task app) resolves into AuthenticatedLayout
+    // — avoids a layout jump into the real NavBar once auth resolves,
+    // unlike a plain centered "Loading…" string.
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <p className="text-sm text-muted-foreground">Loading…</p>
+      <div className="flex min-h-screen flex-col bg-background">
+        <div className="border-b">
+          <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
+            <Skeleton className="h-8 w-32 rounded-full" />
+            <div className="hidden items-center gap-6 md:flex">
+              <Skeleton className="h-4 w-14 rounded-full" />
+              <Skeleton className="h-4 w-14 rounded-full" />
+              <Skeleton className="h-4 w-16 rounded-full" />
+              <Skeleton className="h-4 w-18 rounded-full" />
+            </div>
+            <Skeleton className="size-8 rounded-full" />
+          </div>
+        </div>
+        <div className="mx-auto w-full max-w-6xl flex-1 px-6 py-8">
+          <Skeleton className="h-40 w-full rounded-3xl" />
+          <div className="mt-8 grid gap-4 sm:grid-cols-3">
+            <Skeleton className="h-32 rounded-2xl" />
+            <Skeleton className="h-32 rounded-2xl" />
+            <Skeleton className="h-32 rounded-2xl" />
+          </div>
+        </div>
       </div>
     )
   }
