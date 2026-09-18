@@ -111,6 +111,16 @@ def login_api(request):
         reset_rate_limit(request, "login")
         user = form.get_user()
         login(request, user)
+        # Not a form field — a plain boolean, no validation needed.
+        # SESSION_EXPIRE_AT_BROWSER_CLOSE=True is the app-wide default
+        # (see settings.py), so an unchecked/omitted "remember me" just
+        # falls through to that: session-only, gone once the browser
+        # closes. Checked, it opts this one session into the longer
+        # SESSION_COOKIE_AGE lifetime instead.
+        if data.get("remember_me"):
+            request.session.set_expiry(settings.SESSION_COOKIE_AGE)
+        else:
+            request.session.set_expiry(0)
         return JsonResponse({
             "authenticated": True,
             "username": user.username,

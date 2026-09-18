@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 import os.path
 from pathlib import Path
 from django.urls import reverse_lazy
+from celery.schedules import crontab
 import os
 from dotenv import load_dotenv
 import flexmaster
@@ -35,6 +36,37 @@ ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "localhost").split(",")
 _render_host = os.getenv("RENDER_EXTERNAL_HOSTNAME")
 if _render_host:
     ALLOWED_HOSTS.append(_render_host)
+
+# --- Error monitoring (Sentry) ---
+# Without this, an unhandled exception in production is silent — it
+# just 500s for whoever hit it, and nobody finds out unless that
+# person happens to report it. Free tier (5k events/month), no cost.
+# Only initializes when SENTRY_DSN is actually set, so this is a no-op
+# everywhere it isn't deliberately configured (local dev, CI, this
+# repo's test suite) — nothing new to install/run, nothing sent
+# anywhere, same as every other env-var-gated optional integration in
+# this file (DIGEST_CRON_TOKEN, CELERY_BROKER_URL).
+SENTRY_DSN = os.getenv("SENTRY_DSN")
+if SENTRY_DSN:
+    import sentry_sdk
+    from sentry_sdk.integrations.django import DjangoIntegration
+
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+        integrations=[DjangoIntegration()],
+        # Performance-trace sampling, separate from error capture (which
+        # is always on) — 10% keeps the free tier's transaction quota
+        # from being eaten by every single request under even modest
+        # traffic, while still surfacing genuinely slow endpoints.
+        traces_sample_rate=0.1,
+        environment="production" if not DEBUG else "development",
+        # Opt-out by default: only the error itself gets sent, not
+        # request/user data (cookies, IPs, form bodies, session
+        # contents) to this third party. Turn on deliberately later if
+        # actually needed for debugging, rather than leaking it by
+        # default from day one.
+        send_default_pii=False,
+    )
 
 # Historical note, not the current deployment: this app used to run as
 # two separate Render services (fauxcus-frontend and fauxcus-api), each
@@ -62,6 +94,21 @@ SESSION_COOKIE_SECURE = not DEBUG
 CSRF_COOKIE_SAMESITE = "Lax" if DEBUG else "None"
 CSRF_COOKIE_SECURE = not DEBUG
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+
+# Baseline: no persistent login cookie unless something explicitly asks
+# for one. Without this, Django's default is a session that survives
+# closing the browser entirely (governed by SESSION_COOKIE_AGE below,
+# 2 weeks out of the box) for *every* login, with no way to opt out —
+# too long a window to leave logged in by default on, say, a shared
+# computer. user.api_views.login_api is the one place that opts back
+# in (via request.session.set_expiry(SESSION_COOKIE_AGE)) when its
+# "remember me" checkbox was checked; every other place a session gets
+# established (signup, password reset) just inherits this same
+# session-ends-at-browser-close default.
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True
+# How long "remember me" actually remembers — only takes effect where
+# login_api explicitly opts in above; Django's own default (2 weeks).
+SESSION_COOKIE_AGE = 1209600
 
 # Application definition
 
@@ -249,6 +296,34 @@ EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
 # mail as" settings, or switch EMAIL_BACKEND to a transactional provider
 # (SendGrid/Mailgun/SES/etc.) with its own verified sending domain.
 DEFAULT_FROM_EMAIL = 'Fauxcus <pantheraleo440@gmail.com>'
+
+# Shared secret for tasks.api.views.TriggerDeadlineDigestView — lets a
+# free GitHub Actions `schedule:` cron (.github/workflows/deadline-digest-cron.yml)
+# trigger `send_deadline_digest` in production over plain HTTP, since
+# Render's free tier has no Worker/Cron Job to run a persistent process
+# there at all (see render.yaml's own comments). Must match the
+# DIGEST_CRON_TOKEN secret set on that workflow. Unset (None/"") locally,
+# which the view treats as "digest-triggering disabled" rather than
+# "any token matches".
+DIGEST_CRON_TOKEN = os.getenv('DIGEST_CRON_TOKEN')
+
+# --- Celery (backend/flexmaster/celery.py) ---
+# Local-dev-only — see that file's docstring for why this never runs in
+# production. Runs the exact same send_deadline_digest command
+# DIGEST_CRON_TOKEN's endpoint calls directly for prod, just via Celery
+# Beat locally instead of docker-compose.yml's old `scheduler` service.
+CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL', 'redis://redis:6379/0')
+CELERY_TIMEZONE = 'UTC'
+CELERY_TASK_TRACK_STARTED = True
+CELERY_BEAT_SCHEDULE = {
+    'send-deadline-digest-daily': {
+        'task': 'tasks.tasks.send_deadline_digest_task',
+        # Same UTC hour backend/scheduler.py used to default to
+        # (DIGEST_HOUR_UTC), and the same hour the GitHub Actions
+        # digest cron uses for production — all three agree on "when".
+        'schedule': crontab(hour=int(os.getenv('DIGEST_HOUR_UTC', '13')), minute=0),
+    },
+}
 #
 # ACCOUNT_LOGIN_METHODS = {'email'}
 # ACCOUNT_SIGNUP_FIELDS = ['email*', 'username*', 'password1*', 'password2*']

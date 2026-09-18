@@ -75,3 +75,50 @@ class PendingSignup(models.Model):
 
     def __str__(self):
         return f"{self.email} ({'verified' if self.email_verified else 'unverified'})"
+
+
+class RateLimitAttempt(models.Model):
+    """
+    Backs ratelimit.py's fixed-window counter. Postgres-backed rather
+    than Django's cache framework (the previous implementation used the
+    default LocMemCache) specifically so this survives a process
+    restart — on Render's free tier the whole app spins down after 15
+    minutes idle and comes back as a fresh process on the next request,
+    which would silently reset every in-memory counter back to zero.
+    For a security control like login-attempt throttling, that means
+    the real protection an attacker faces is "however many failed
+    attempts fit in the time before the next cold start", not the
+    LIMIT the code says — worse on a low-traffic deployment, where cold
+    starts happen more often, not less. A row in the same Postgres
+    database everything else already persists to doesn't have that
+    problem, and needs no new infrastructure (no Redis, nothing else to
+    run/pay for).
+
+    One row per (scope, client_ip) pair — see ratelimit.py's own
+    get_client_ip. `expires_at` implements the same sliding-expiry
+    behavior the old cache.set(key, value, timeout) call had: every
+    counted attempt pushes expires_at forward by the caller's
+    window_seconds again, so it's "N attempts with no gap longer than
+    window_seconds between any two of them", not a strict fixed window
+    from the first attempt.
+    """
+
+    scope = models.CharField(max_length=64)
+    # Plain CharField, not GenericIPAddressField — that maps to
+    # Postgres' `inet` type, which enforces valid-IP format at the
+    # database level (Django's own field validation doesn't run on a
+    # plain .save()). get_client_ip() has an "unknown" fallback for
+    # when REMOTE_ADDR is genuinely missing; a stricter column would
+    # turn that already-defensive fallback into a hard 500 instead.
+    # 45 chars comfortably covers the longest valid IPv6 representation.
+    client_ip = models.CharField(max_length=45)
+    count = models.PositiveIntegerField(default=0)
+    expires_at = models.DateTimeField(db_index=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["scope", "client_ip"], name="unique_ratelimit_scope_ip")
+        ]
+
+    def __str__(self):
+        return f"{self.scope}:{self.client_ip} ({self.count}, expires {self.expires_at})"
