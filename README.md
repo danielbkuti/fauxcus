@@ -311,6 +311,10 @@ Frontend and backend were originally two separate Render services, on two separa
 
 The deadline-digest job used to be `backend/scheduler.py`: a plain Python script that slept until a target UTC hour and ran the digest command directly, once a day, forever, as its own long-running process. That works, but it's homegrown infrastructure for a problem the ecosystem already has a standard answer to — no retry semantics, no visibility into what ran or failed, and every *additional* background job this app ever needed would mean writing another loop like it. Replaced with Celery (worker + Beat) and Redis as the broker: the schedule lives in Django settings (`CELERY_BEAT_SCHEDULE`) instead of a hardcoded sleep calculation, Celery Beat ticks the schedule, and a separate worker process executes the job — the standard split, and the one any *next* background job in this app would slot into for free. See [Deployment](#deployment) for why this runs in local dev only, not production.
 
+### Database-Backed Rate Limiting Over Django's Cache
+
+Auth-endpoint rate limiting (`backend/user/ratelimit.py`) used to sit on Django's default cache backend (`LocMemCache`) — in-process memory. That's fine on an always-on server, but Render's free tier spins the whole app down after 15 minutes idle; the next request boots a fresh process with empty memory, silently resetting every rate-limit counter to zero. On a low-traffic deployment, cold starts aren't rare — so the real protection an attacker faced was "however many attempts fit before the next cold start," not the configured limit. Moved the counter into Postgres (`RateLimitAttempt`) instead — the same database everything else in this app already persists to, so it survives a restart with no new infrastructure (no Redis, nothing extra to run or pay for).
+
 ---
 
 # Future Improvements
