@@ -51,7 +51,7 @@ jobs:
         run: python backend/manage.py test
 
   frontend:
-    name: Frontend build & lint
+    name: Frontend build, test & lint
     runs-on: ubuntu-latest
 
     steps:
@@ -67,6 +67,10 @@ jobs:
       - name: Install frontend dependencies
         working-directory: frontend
         run: npm ci
+
+      - name: Test
+        working-directory: frontend
+        run: npm test
 
       - name: Build
         working-directory: frontend
