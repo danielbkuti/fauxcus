@@ -3,8 +3,12 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { X, SquarePlus, Target, CalendarDays, ListPlus, CalendarClock, FileText } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { updateTask } from '@/lib/tasks'
+import { createCalendarItem } from '@/lib/calendarItems'
 import { useTaskStore } from '@/context/TaskStoreContext'
+import { useAddTaskFab } from '@/context/AddTaskFabContext'
 import { cn } from '@/lib/utils'
+
+const EMPTY_CALENDAR_DRAFT = { name: '', dateStart: '', dateEnd: '', location: '' }
 
 const TASK_DETAIL_PATH = /^\/tasks\/(\d+)$/
 
@@ -86,9 +90,10 @@ function ActionCard({ children, as: Tag = 'div', ...props }) {
 // authenticated page. What it offers changes with where you are: a
 // task detail page gets options scoped to *that* task (subtask,
 // deadline, description); everywhere else gets the same three
-// top-level "start something new" options. There's still no
-// dedicated add flow for Goals/Calendar (those pages don't exist yet
-// — see ComingSoonPage), so those two just navigate there for now.
+// top-level "start something new" options. Goals doesn't have a data
+// model yet (see ComingSoonPage), so that option still just navigates
+// there; "Add a calendar item" expands into its own inline form (see
+// the 'calendar' activeAction below) the same way "description" does.
 //
 // The subtask and deadline options used to open their own inline
 // mini-editor floating above the FAB (a second copy of AddSubtaskForm/
@@ -102,14 +107,21 @@ function ActionCard({ children, as: Tag = 'div', ...props }) {
 // the page yet (there's nowhere there to display or edit it — see the
 // backlog note on that), so it keeps its own inline form here for now.
 //
-// The menu itself — option stack or the description form it expands
-// into — still floats directly above the FAB rather than in a
+// The menu itself — option stack or whichever form it expands into —
+// still floats directly above the FAB rather than in a
 // centered dialog, so it visibly originates from the button that
 // opened it. The full-screen blurred backdrop still blocks the rest
 // of the page, same as OverdueGateModal; only the content's position
 // changed.
 export function AddTaskFab() {
-  const [open, setOpen] = useState(false)
+  // Shared with the rest of the authenticated shell (AddTaskFabContext)
+  // rather than local state — so a page like CalendarPage's empty-day
+  // state can open this same menu itself, not just the button below.
+  // `prefillDate` is set the same way, by whatever opened the menu with
+  // a specific day already in mind — only the 'task' option below reads
+  // it (see defaultOptions), since /goals and /calendar don't take a
+  // date.
+  const { open, setOpen, prefillDate, setPrefillDate, bumpCalendarItemsVersion } = useAddTaskFab()
   // Reduced motion drops the whole press-transition's duration to 0 —
   // per fab-motion-handoff.md's own suggested shortcut, rather than
   // special-casing the rotation and ring separately. At 0ms, `rotate`
@@ -119,11 +131,12 @@ export function AddTaskFab() {
   // color crossfades still happen (just instantly, not animated).
   const fabDur = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 0 : FAB_DUR
   const fabTransition = (prop) => `${prop} ${fabDur}ms ${FAB_EASE}`
-  // null | 'description' — the only option left that still expands
-  // in place rather than navigating.
+  // null | 'description' | 'calendar' — the options that expand in
+  // place rather than navigating.
   const [activeAction, setActiveAction] = useState(null)
   const [descriptionDraft, setDescriptionDraft] = useState('')
   const [descriptionDraftDirty, setDescriptionDraftDirty] = useState(false)
+  const [calendarDraft, setCalendarDraft] = useState(EMPTY_CALENDAR_DRAFT)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState(null)
   const navigate = useNavigate()
@@ -148,6 +161,8 @@ export function AddTaskFab() {
     setActiveAction(null)
     setError(null)
     setDescriptionDraftDirty(false)
+    setCalendarDraft(EMPTY_CALENDAR_DRAFT)
+    setPrefillDate(null)
   }
 
   // Mutates through the same shared store TaskDetailPage reads from —
@@ -178,10 +193,73 @@ export function AddTaskFab() {
     }
   }
 
+  // A plain native <input type="datetime-local"> pair (start/end)
+  // rather than the app's own wheel-picker DeadlineEditor — that
+  // component is built around a single Task deadline and a portal-
+  // positioned popover anchored to a trigger button, neither of which
+  // fits this menu's own small, already-expanding inline card. Trades
+  // a bit of visual polish for staying genuinely small; nothing stops a
+  // later pass from swapping this for something fancier.
+  async function handleCreateCalendarItem(event) {
+    event.preventDefault()
+    setError(null)
+    setSubmitting(true)
+    try {
+      await createCalendarItem({
+        name: calendarDraft.name,
+        // <input type="datetime-local">'s value has no timezone info at
+        // all — it's local wall-clock time by construction — so `new
+        // Date(...)` interpreting it as local (not UTC) before
+        // converting to a real ISO instant is exactly right, same
+        // assumption DeadlineEditor's own value already relies on.
+        dateStart: new Date(calendarDraft.dateStart).toISOString(),
+        dateEnd: calendarDraft.dateEnd ? new Date(calendarDraft.dateEnd).toISOString() : undefined,
+        location: calendarDraft.location.trim() ? calendarDraft.location.trim() : undefined,
+      })
+      // CalendarPage has no automatic way to see this — it's not part
+      // of the shared TaskStoreContext, see this context's own comment
+      // on calendarItemsVersion.
+      bumpCalendarItemsVersion()
+      closeMenu()
+    } catch (err) {
+      setError(
+        err.data?.dateStart?.[0] ??
+          err.data?.dateEnd?.[0] ??
+          err.data?.non_field_errors?.[0] ??
+          err.data?.name?.[0] ??
+          'Could not create that calendar item.'
+      )
+      setSubmitting(false)
+    }
+  }
+
   const defaultOptions = [
-    { key: 'task', label: 'Add a new task', icon: SquarePlus, accent: COLOR_TASK, onClick: () => goTo('/tasks/new') },
+    {
+      key: 'task',
+      label: 'Add a new task',
+      icon: SquarePlus,
+      accent: COLOR_TASK,
+      // CalendarPage sets prefillDate before opening the menu when
+      // this was reached by clicking a specific day (an empty cell, or
+      // the rail's "Add task on this day" button) — carries that date
+      // through as a query param so NewTaskPage can seed the deadline
+      // with it instead of the form opening blank.
+      onClick: () => goTo(prefillDate ? `/tasks/new?date=${prefillDate}` : '/tasks/new'),
+    },
     { key: 'goal', label: 'Add a new goal', icon: Target, accent: COLOR_GOAL, onClick: () => goTo('/goals') },
-    { key: 'calendar', label: 'Add a calendar item', icon: CalendarDays, accent: COLOR_CALENDAR, onClick: () => goTo('/calendar') },
+    {
+      key: 'calendar',
+      label: 'Add a calendar item',
+      icon: CalendarDays,
+      accent: COLOR_CALENDAR,
+      // Same prefillDate the 'task' option above reads — seeds a
+      // default 9am start on that day instead of opening blank, when
+      // this was reached by clicking a specific day on the calendar.
+      onClick: () => {
+        setCalendarDraft({ ...EMPTY_CALENDAR_DRAFT, dateStart: prefillDate ? `${prefillDate}T09:00` : '' })
+        setActiveAction('calendar')
+      },
+    },
   ]
 
   const detailOptions = [
@@ -264,6 +342,66 @@ export function AddTaskFab() {
                   </Button>
                   <Button type="submit" size="sm" disabled={submitting}>
                     {submitting ? 'Saving…' : 'Save'}
+                  </Button>
+                </div>
+              </ActionCard>
+            )}
+
+            {activeAction === 'calendar' && (
+              <ActionCard as="form" onSubmit={handleCreateCalendarItem}>
+                <div className="flex items-start justify-between gap-2">
+                  <h2 className="text-sm font-semibold">Add a calendar item</h2>
+                  <button
+                    type="button"
+                    onClick={closeMenu}
+                    aria-label="Close"
+                    className="shrink-0 text-muted-foreground hover:text-foreground"
+                  >
+                    <X className="size-4" />
+                  </button>
+                </div>
+                <div className="mt-3 flex flex-col gap-2.5">
+                  <input
+                    value={calendarDraft.name}
+                    onChange={(e) => setCalendarDraft((d) => ({ ...d, name: e.target.value }))}
+                    placeholder="What is it?"
+                    autoFocus
+                    required
+                    className="w-full rounded-md border border-input bg-transparent px-2 py-1.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                  />
+                  <label className="flex flex-col gap-1 text-xs font-medium text-muted-foreground">
+                    Starts
+                    <input
+                      type="datetime-local"
+                      value={calendarDraft.dateStart}
+                      onChange={(e) => setCalendarDraft((d) => ({ ...d, dateStart: e.target.value }))}
+                      required
+                      className="rounded-md border border-input bg-transparent px-2 py-1.5 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                    />
+                  </label>
+                  <label className="flex flex-col gap-1 text-xs font-medium text-muted-foreground">
+                    Ends (optional)
+                    <input
+                      type="datetime-local"
+                      value={calendarDraft.dateEnd}
+                      onChange={(e) => setCalendarDraft((d) => ({ ...d, dateEnd: e.target.value }))}
+                      className="rounded-md border border-input bg-transparent px-2 py-1.5 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                    />
+                  </label>
+                  <input
+                    value={calendarDraft.location}
+                    onChange={(e) => setCalendarDraft((d) => ({ ...d, location: e.target.value }))}
+                    placeholder="Location (optional)"
+                    className="w-full rounded-md border border-input bg-transparent px-2 py-1.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                  />
+                </div>
+                {error && <p className="mt-2 text-xs text-destructive">{error}</p>}
+                <div className="mt-3 flex justify-end gap-2">
+                  <Button type="button" variant="ghost" size="sm" onClick={closeMenu} disabled={submitting}>
+                    Cancel
+                  </Button>
+                  <Button type="submit" size="sm" disabled={submitting}>
+                    {submitting ? 'Adding…' : 'Add'}
                   </Button>
                 </div>
               </ActionCard>

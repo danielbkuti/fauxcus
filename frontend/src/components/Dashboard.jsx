@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { SquarePlus, Target, CalendarDays, Sparkles, Flame, ArrowRight, Hammer } from 'lucide-react'
 import { Checkbox } from '@/components/ui/checkbox'
+import { Skeleton } from '@/components/ui/skeleton'
 import { PulseRing } from '@/components/PulseRing'
 import { cn } from '@/lib/utils'
 import { useDeadlineStatus } from '@/hooks/useDeadlineStatus'
@@ -494,23 +495,39 @@ export function Dashboard({ firstName, username, justLoggedIn, onWelcomeSeen }) 
                   displayName
                 )}
               </h1>
-              <p className="m-0 text-sm text-white/62">{heroSubtitle}</p>
+              {status === 'loading' ? (
+                <Skeleton className="mt-0.5 h-[17px] w-56 max-w-full bg-white/15" />
+              ) : (
+                <p className="m-0 text-sm text-white/62">{heroSubtitle}</p>
+              )}
             </div>
           </div>
           <div className="flex gap-3.5">
             <div className="flex flex-1 flex-col gap-[3px] rounded-xl bg-white/8 p-[14px_18px] outline outline-1 -outline-offset-1 outline-white/16 backdrop-blur-[6px]">
-              <span className="font-display text-[26px] font-bold tracking-[-.02em] text-white tabular-nums">{doneToday}</span>
+              {status === 'loading' ? (
+                <Skeleton className="h-[26px] w-9 rounded-md bg-white/20" />
+              ) : (
+                <span className="font-display text-[26px] font-bold tracking-[-.02em] text-white tabular-nums">{doneToday}</span>
+              )}
               <span className="text-[11px] font-bold uppercase tracking-[.07em] text-white/60">Done today</span>
             </div>
             <div className="flex flex-1 flex-col gap-[3px] rounded-xl bg-white/8 p-[14px_18px] outline outline-1 -outline-offset-1 outline-white/16 backdrop-blur-[6px]">
-              <span className="font-display text-[26px] font-bold tracking-[-.02em] text-white tabular-nums">{dueToday}</span>
+              {status === 'loading' ? (
+                <Skeleton className="h-[26px] w-9 rounded-md bg-white/20" />
+              ) : (
+                <span className="font-display text-[26px] font-bold tracking-[-.02em] text-white tabular-nums">{dueToday}</span>
+              )}
               <span className="text-[11px] font-bold uppercase tracking-[.07em] text-white/60">Due today</span>
             </div>
             <div className="flex flex-1 flex-col gap-[3px] rounded-xl bg-white/8 p-[14px_18px] outline outline-1 -outline-offset-1 outline-white/16 backdrop-blur-[6px]">
-              <span className="flex items-center gap-1.5 font-display text-[26px] font-bold tracking-[-.02em] text-white tabular-nums">
-                {currentStreak}
-                {currentStreak > 0 && <Flame className="size-[18px] fill-orange-400 text-orange-400" />}
-              </span>
+              {status === 'loading' ? (
+                <Skeleton className="h-[26px] w-9 rounded-md bg-white/20" />
+              ) : (
+                <span className="flex items-center gap-1.5 font-display text-[26px] font-bold tracking-[-.02em] text-white tabular-nums">
+                  {currentStreak}
+                  {currentStreak > 0 && <Flame className="size-[18px] fill-orange-400 text-orange-400" />}
+                </span>
+              )}
               <span className="text-[11px] font-bold uppercase tracking-[.07em] text-white/60">Day streak</span>
             </div>
           </div>
@@ -597,7 +614,7 @@ export function Dashboard({ firstName, username, justLoggedIn, onWelcomeSeen }) 
           accentShadow="rgba(142,197,252,.75)"
           eyebrowIcon={CalendarDays}
           eyebrowLabel="Calendar"
-          meta="Coming soon"
+          meta={now.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
           previewBg="rgba(18,49,75,.09)"
           title="View your calendar"
           buttonLabel="Open"
@@ -639,7 +656,7 @@ export function Dashboard({ firstName, username, justLoggedIn, onWelcomeSeen }) 
                     )
                   )}
                 </div>
-                <span className="text-[11px] font-bold text-[#12314b]/75">Full calendar view — coming soon</span>
+                <span className="text-[11px] font-bold text-[#12314b]/75">Full calendar view →</span>
               </>
             )
           }}
@@ -657,7 +674,15 @@ export function Dashboard({ firstName, username, justLoggedIn, onWelcomeSeen }) 
           </div>
 
           {status === 'loading' && (
-            <p className="text-sm text-muted-foreground">Loading…</p>
+            <div className="flex flex-col gap-2.5">
+              {[0, 1, 2].map((i) => (
+                <div key={i} className="flex items-center gap-[14px] rounded-[14px] bg-card px-[18px] py-[14px] ring-1 ring-foreground/10">
+                  <Skeleton className="size-4 shrink-0 rounded-[6px]" />
+                  <Skeleton className="h-4 flex-1 rounded-full" />
+                  <Skeleton className="h-5 w-20 shrink-0 rounded-full" />
+                </div>
+              ))}
+            </div>
           )}
 
           {status === 'error' && (

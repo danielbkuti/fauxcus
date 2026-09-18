@@ -105,7 +105,12 @@ export function NotificationBell({ scrolled }) {
         {unreadCount > 0 && (
           <span
             aria-hidden="true"
-            className="absolute -top-0.5 -right-0.5 flex size-4 items-center justify-center rounded-full bg-red-600 text-[9px] font-bold text-white"
+            // z-10, above .gradient-ring's own z-index:1 (index.css) — the
+            // ring wraps the whole button including this top-right
+            // corner, so without a higher z-index it painted over the
+            // count bubble once scrolled (when the ring's actually
+            // there) instead of sitting behind it.
+            className="absolute -top-0.5 -right-0.5 z-10 flex size-4 items-center justify-center rounded-full bg-red-600 text-[9px] font-bold text-white"
           >
             {unreadCount > 9 ? '9+' : unreadCount}
           </span>

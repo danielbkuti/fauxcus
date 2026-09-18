@@ -9,6 +9,7 @@ import { DeadlineEditor } from '@/components/DeadlineEditor'
 import { useExclusiveDeadlineEditor } from '@/hooks/useExclusiveDeadlineEditor'
 import { AddSubtaskForm } from '@/components/AddSubtaskForm'
 import { TaskFireworks, SubtaskConfetti, CompletionWash } from '@/components/TaskDetailCelebrations'
+import { Skeleton } from '@/components/ui/skeleton'
 
 // How long a just-checked subtask stays in place (checkbox filled
 // green, name struck through) before it's actually allowed to resort
@@ -479,9 +480,46 @@ export function TaskDetailPage() {
   }
 
   if (status === 'loading') {
+    // Same rounded-[30px] / 246px-rail + content shell the real page
+    // (and NewTaskPage's own borrowed copy of it) renders into, in the
+    // calm 'far' palette — so the page doesn't jump in size once the
+    // real theme (chosen by the task's actual deadline state) replaces
+    // this placeholder.
+    const theme = STATE_THEME.far
     return (
-      <div className="mx-auto max-w-3xl px-8 py-8">
-        <p className="text-sm text-muted-foreground">Loading…</p>
+      <div className="mx-auto max-w-5xl px-6 py-8">
+        <div className="relative overflow-hidden rounded-[30px]" style={{ background: theme.flood, boxShadow: theme.shadow }}>
+          <span aria-hidden="true" className="task-detail-ring" style={{ '--task-accent': theme.border }} />
+          <div className="relative z-[2] grid grid-cols-1 items-start md:grid-cols-[246px_1fr]">
+            <div
+              className="flex flex-col gap-5 self-stretch border-b px-5 py-[22px] md:border-r md:border-b-0"
+              style={{
+                background: 'linear-gradient(180deg,rgba(255,255,255,.82),rgba(255,255,255,.5))',
+                borderColor: theme.hairline,
+              }}
+            >
+              <Skeleton className="h-3.5 w-24 rounded-full" style={{ backgroundColor: theme.strong, opacity: 0.35 }} />
+              <div className="flex flex-col gap-2">
+                <Skeleton className="h-2.5 w-16 rounded-full" style={{ backgroundColor: theme.strong, opacity: 0.35 }} />
+                <Skeleton className="h-9 w-full rounded-xl" style={{ backgroundColor: theme.strong, opacity: 0.15 }} />
+              </div>
+              <div className="mt-auto flex flex-col gap-2 pt-2">
+                <Skeleton className="h-9 w-full rounded-full" style={{ backgroundColor: theme.strong, opacity: 0.25 }} />
+              </div>
+            </div>
+            <div className="flex min-w-0 flex-col gap-5 px-6 pt-[22px] pb-6">
+              <Skeleton className="h-9 w-3/4 rounded-2xl" style={{ backgroundColor: theme.strong, opacity: 0.15 }} />
+              <div className="flex flex-col gap-2">
+                <Skeleton className="h-3 w-28 rounded-full" style={{ backgroundColor: theme.strong, opacity: 0.35 }} />
+                <Skeleton className="h-24 w-full rounded-2xl" style={{ backgroundColor: theme.strong, opacity: 0.12 }} />
+              </div>
+              <div className="flex flex-col gap-2">
+                <Skeleton className="h-3 w-20 rounded-full" style={{ backgroundColor: theme.strong, opacity: 0.35 }} />
+                <Skeleton className="h-14 w-full rounded-2xl" style={{ backgroundColor: theme.strong, opacity: 0.12 }} />
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     )
   }

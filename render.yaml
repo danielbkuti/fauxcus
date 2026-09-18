@@ -103,6 +103,12 @@ services:
       # Render prompts for it rather than deploying with it blank.
       - key: DIGEST_CRON_TOKEN
         sync: false
+      # Error monitoring — free tier (5k events/month), get a DSN from
+      # sentry.io. sync: false so Render prompts for it; left blank
+      # here just disables Sentry entirely rather than breaking
+      # anything (see settings.py's SENTRY_DSN handling).
+      - key: SENTRY_DSN
+        sync: false
       # Populates demo@example.com with a realistic task history the
       # first time this runs against a database where that account has
       # no tasks yet (a fresh Neon DB, or the demo account's tasks

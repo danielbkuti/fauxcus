@@ -4,6 +4,7 @@ import { ListChecks, SquarePlus, X } from 'lucide-react'
 import { TaskCard, SubtaskStackCard } from '@/components/TaskCard'
 import { OverdueGateModal, collectOverdueItems } from '@/components/OverdueGateModal'
 import { Button } from '@/components/ui/button'
+import { Skeleton } from '@/components/ui/skeleton'
 import { updateTask, deleteTask, createSubTask, updateSubTask, deleteSubTask } from '@/lib/tasks'
 import { useTaskStore } from '@/context/TaskStoreContext'
 import { useScrollReveal } from '@/hooks/useScrollReveal'
@@ -321,7 +322,17 @@ export function TaskList() {
   }
 
   if (status === 'loading') {
-    return <p className="text-sm text-muted-foreground">Loading tasks…</p>
+    return (
+      <div className="flex flex-col gap-2">
+        {[0, 1, 2, 3, 4].map((i) => (
+          <div key={i} className="flex items-center gap-2 rounded-lg bg-card px-3 py-2 shadow-sm ring-1 ring-foreground/10">
+            <Skeleton className="size-4 shrink-0 rounded-full" />
+            <Skeleton className={cn('h-4 flex-1 rounded-full', i % 2 === 1 && 'max-w-[60%]')} />
+            <Skeleton className="h-5 w-16 shrink-0 rounded-full" />
+          </div>
+        ))}
+      </div>
+    )
   }
 
   if (status === 'error') {

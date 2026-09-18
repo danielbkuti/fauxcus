@@ -92,6 +92,7 @@ The deadline-digest scheduler is also handled differently in production than in 
 - Deadline editor: a portal-based wheel picker (day/month/year, optional time-of-day), shared across every place a deadline gets set
 - Progress page: a full-bleed stats band (completion rate, streaks, a 7-day sparkline, a 30/90/all-time period toggle) over a chart section — weekly created-vs-closed bars, a status breakdown, a GitHub-style daily-activity heatmap doubling as a streak visual, and day-of-week/time-of-day distributions — plus a searchable archive of everything completed
 - In-app notifications: a bell with an unread badge for tasks/subtasks due soon, backed by a daily email digest (see [Deployment](#deployment) for how the digest actually runs in production vs. local dev)
+- Calendar: Month/Week/Day views (Week/Day on a real 24-hour hourly grid) over tasks, subtasks, and calendar items alike, with deadline-state color coding, a filterable rail, and quick-add straight from an empty day
 
 ### Authentication
 - Custom user model
@@ -106,6 +107,9 @@ The deadline-digest scheduler is also handled differently in production than in 
 - Automatic parent-task completion propagation from subtasks
 - Per-task activity log (created, renamed, completed/reopened, deadline changes)
 
+### Calendar Items
+- Create/delete a calendar item — a time-anchored entry (start time, optional end time, optional location) distinct from a Task; see [Task vs. Calendar Item](#task-vs-calendar-item) below
+
 ### API
 - RESTful endpoints
 - Filtering
@@ -118,6 +122,7 @@ The deadline-digest scheduler is also handled differently in production than in 
 - PostgreSQL container
 - Environment variable configuration
 - Free production deployment on Render — one Docker service serving both the API and the built frontend, Neon Postgres, zero manual server management (see [Deployment](#deployment))
+- Error monitoring in production (Sentry, free tier) — an unhandled exception is otherwise silent: a 500 for whoever hit it, and no record anywhere. Opt-in via `SENTRY_DSN`; a no-op everywhere that isn't set (local dev, CI)
 
 ### Data Integrity
 - Unique task name per user
@@ -164,12 +169,24 @@ The same page in two of its four deadline-driven states — in progress (purple,
 
 - GET /api/subtasks/
 - POST /api/subtasks/
+
+- GET /api/calendar-items/
+- POST /api/calendar-items/
+- DELETE /api/calendar-items/{id}/
 ```
 
  ### Filtering Example
 
 ```
 /api/tasks/?completed=true
+```
+
+### Date-Range Filtering Example
+
+`/api/tasks/` and `/api/subtasks/` accept a `dateDeadline` range, and `/api/calendar-items/` a `dateStart` range — what the calendar view filters each of the three on to fetch "what's due/happening this month" instead of walking the entire list client-side. Both fields are stored in UTC; convert the viewer's local day/month boundaries to UTC before passing them here rather than relying on a same-day-in-UTC assumption.
+
+```
+/api/tasks/?dateDeadline__gte=2026-09-01T00:00:00Z&dateDeadline__lte=2026-10-01T00:00:00Z
 ```
 
 ### Ordering Example
@@ -315,11 +332,28 @@ The deadline-digest job used to be `backend/scheduler.py`: a plain Python script
 
 Auth-endpoint rate limiting (`backend/user/ratelimit.py`) used to sit on Django's default cache backend (`LocMemCache`) — in-process memory. That's fine on an always-on server, but Render's free tier spins the whole app down after 15 minutes idle; the next request boots a fresh process with empty memory, silently resetting every rate-limit counter to zero. On a low-traffic deployment, cold starts aren't rare — so the real protection an attacker faced was "however many attempts fit before the next cold start," not the configured limit. Moved the counter into Postgres (`RateLimitAttempt`) instead — the same database everything else in this app already persists to, so it survives a restart with no new infrastructure (no Redis, nothing extra to run or pay for).
 
+### Error Monitoring (Sentry)
+
+Before this, an unhandled exception in production was invisible — the request just 500s for whoever hit it, and nothing records that it happened at all; finding out meant a user reporting it, if they bothered to. `sentry_sdk.init()` in `settings.py` is gated entirely on `SENTRY_DSN` being set, so it's a genuine no-op everywhere that env var isn't deliberately configured (local dev, CI, this repo's own test suite) — no new behavior, nothing sent, nothing to install or run. `send_default_pii` is explicitly off: only the error itself goes to Sentry, not request/user data, unless that's deliberately turned on later for a specific debugging need.
+
+### Skeleton Loaders for Async Page Content
+
+Every page whose content depends on an async fetch (Dashboard, Tasks, a task's detail page, Progress, Profile, Calendar) renders a skeleton — a pulsing placeholder shaped roughly like the real content — while that fetch is in flight, rather than a bare "Loading…" string or, worse, nothing (a `status === 'loading'` view that just renders as an empty section reads as "you have nothing here yet," not "this hasn't loaded"). `frontend/src/components/ui/skeleton.jsx` exports the one shared `Skeleton` primitive this is built from — a pulsing block, reshaped per call site via `className` (and an optional `style` for the rare case where the tint itself has to be a runtime value, like a per-task-state theme color, rather than a static Tailwind class).
+
+**This is a required pattern for any new page or view added to this app going forward** — a `status === 'loading'` branch that returns plain text or nothing is a regression, not a stopgap to clean up later.
+
+### Task vs. Calendar Item
+
+A Task is deadline-anchored — "finish this *by* a point in time" — and naturally decomposes into subtasks toward completion. A CalendarItem is time-anchored — "this *happens at* (or between) these times" — and isn't something you complete at all; it just occurs. Forcing an event through Task's shape (`dateDeadline` + `completed`) would mean it either sits "incomplete" forever or gets auto-completed the instant it passes, neither of which means anything for something like "Dentist appointment" or "Sam's birthday". So it's its own model (`backend/tasks/models.py`): `dateStart` (required) + `dateEnd` (optional — many calendar items are a single instant, not a span), no `completed`, no subtasks, no activity log. On the frontend it slots into the calendar page as a fifth item `kind` (alongside task/subtask) with its own always-steady color — a calendar item is never overdue/urgent/done, so it doesn't participate in those deadline-urgency states at all.
+
+Deliberately kept small for a first pass: creation is a plain inline form in the FAB (native `<input type="datetime-local">`, not the app's wheel-picker `DeadlineEditor` — that component is built around a single Task deadline and a popover anchored to a trigger button, neither of which fits this menu's own small expanding card), there's no edit flow yet (delete-and-recreate), and no recurrence (a "every Monday" event is a materially harder feature — exception dates, an end condition — not a small extension of this).
+
 ---
 
 # Future Improvements
 
-- Goals and Calendar pages (currently placeholders)
+- Goals page (currently a placeholder)
+- Calendar item editing and recurrence (currently create/delete only — see [Task vs. Calendar Item](#task-vs-calendar-item))
 - JWT authentication
 
 ---

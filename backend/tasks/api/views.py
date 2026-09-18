@@ -7,8 +7,8 @@ from rest_framework import viewsets, permissions, mixins, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from ..models import Task, SubTask, TaskActivity, Notification
-from .serializers import TaskSerializer, SubTaskSerializer, NotificationSerializer
+from ..models import Task, SubTask, TaskActivity, Notification, CalendarItem
+from .serializers import TaskSerializer, SubTaskSerializer, NotificationSerializer, CalendarItemSerializer
 from rest_framework.filters import OrderingFilter
 from django_filters.rest_framework import DjangoFilterBackend
 
@@ -22,7 +22,23 @@ class TaskViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
     filter_backends = [DjangoFilterBackend, OrderingFilter]
 
-    filterset_fields = ["completed", "status"]
+    # dateDeadline's gte/lte pair is what the calendar view (and
+    # anything else wanting "what's due in this range") filters on —
+    # e.g. ?dateDeadline__gte=2026-09-01T00:00:00Z&dateDeadline__lte=2026-10-01T00:00:00Z
+    # for a month. Deliberately just gte/lte, not an `exact`-day lookup
+    # like dateDeadline__date: dateDeadline is stored in UTC, and
+    # "which calendar day is this due on" is a *local-timezone*
+    # question the caller has to answer, same as every other
+    # deadline-derived thing in this app (formatDeadline, the overdue
+    # gate, etc.) — a raw __date lookup against the stored UTC value
+    # would silently give the wrong day for a chunk of users near
+    # midnight. Compute the local day's start/end as UTC client-side
+    # and pass those as gte/lte instead.
+    filterset_fields = {
+        "completed": ["exact"],
+        "status": ["exact"],
+        "dateDeadline": ["gte", "lte"],
+    }
     ordering_fields = ["dateDeadline", "dateCreated"]
     ordering = ["-dateDeadline"]
 
@@ -45,6 +61,11 @@ class SubTaskViewSet(viewsets.ModelViewSet):
 
     serializer_class = SubTaskSerializer
     permission_classes = [permissions.IsAuthenticated]
+    filter_backends = [DjangoFilterBackend]
+
+    # Same reasoning as TaskViewSet's own dateDeadline filter — see
+    # there for why this is gte/lte only, not an exact-day lookup.
+    filterset_fields = {"dateDeadline": ["gte", "lte"]}
 
     def get_queryset(self):
         return SubTask.objects.filter(
@@ -63,6 +84,30 @@ class SubTaskViewSet(viewsets.ModelViewSet):
         name = instance.name
         instance.delete()
         TaskActivity.objects.create(task=task, message=f'Subtask "{name}" removed')
+
+
+class CalendarItemViewSet(viewsets.ModelViewSet):
+    """
+    REST API endpoint for a user's own calendar items — see
+    CalendarItem's own docstring for what these are and why they're a
+    separate model from Task.
+    """
+
+    serializer_class = CalendarItemSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    filter_backends = [DjangoFilterBackend]
+
+    # Same gte/lte-only reasoning as TaskViewSet.filterset_fields — see
+    # there. dateStart is always set (unlike Task's dateDeadline), so
+    # unlike that filter there's no "no deadline at all" case to worry
+    # about excluding.
+    filterset_fields = {"dateStart": ["gte", "lte"]}
+
+    def get_queryset(self):
+        return CalendarItem.objects.filter(user=self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
 
 
 class NotificationViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, mixins.UpdateModelMixin, viewsets.GenericViewSet):

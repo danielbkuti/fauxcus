@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Skeleton } from '@/components/ui/skeleton'
 import { fetchProfile, updateProfile, changePassword, deleteAccount, logout } from '@/lib/auth'
 import { formatDeadline } from '@/lib/utils'
 
@@ -168,8 +169,29 @@ export function ProfilePage() {
 
   if (status === 'loading') {
     return (
-      <div className="mx-auto max-w-2xl px-8 py-8">
-        <p className="text-sm text-muted-foreground">Loading…</p>
+      <div className="mx-auto flex max-w-2xl flex-col gap-6 px-8 py-8">
+        <div className="flex items-center gap-3">
+          <Skeleton className="size-11 shrink-0" />
+          <div className="flex flex-col gap-2">
+            <Skeleton className="h-6 w-24 rounded-md" />
+            <Skeleton className="h-4 w-56 rounded-full" />
+          </div>
+        </div>
+        {[0, 1, 2].map((i) => (
+          <Card key={i}>
+            <CardHeader>
+              <Skeleton className="h-5 w-40 rounded-md" />
+              <Skeleton className="mt-1.5 h-3.5 w-64 max-w-full rounded-full" />
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-col gap-4">
+                <Skeleton className="h-9 w-full max-w-sm rounded-md" />
+                {i < 2 && <Skeleton className="h-9 w-full max-w-sm rounded-md" />}
+                <Skeleton className="h-9 w-28 rounded-md" />
+              </div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
     )
   }

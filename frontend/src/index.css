@@ -602,3 +602,39 @@
     transition: none;
   }
 }
+
+/* --- CalendarPage: view navigation ---------------------------------------
+   Plays once (no `infinite`) each time Previous/Next or the month grid's
+   own week-number stepper moves the visible view — up/down only from that
+   stepper (Month view only, scrolls its window by a row), left/right from
+   Previous/Next in any of the three views (Month, Week, or Day) — a short
+   slide-in-and-settle rather than the view just cutting to its new content. */
+@keyframes view-slide-up {
+  from { transform: translateY(10px); opacity: 0.4; }
+  to { transform: translateY(0); opacity: 1; }
+}
+@keyframes view-slide-down {
+  from { transform: translateY(-10px); opacity: 0.4; }
+  to { transform: translateY(0); opacity: 1; }
+}
+@keyframes view-slide-left {
+  from { transform: translateX(-14px); opacity: 0.4; }
+  to { transform: translateX(0); opacity: 1; }
+}
+@keyframes view-slide-right {
+  from { transform: translateX(14px); opacity: 0.4; }
+  to { transform: translateX(0); opacity: 1; }
+}
+.animate-view-slide-up { animation: view-slide-up 220ms ease-out; }
+.animate-view-slide-down { animation: view-slide-down 220ms ease-out; }
+.animate-view-slide-left { animation: view-slide-left 220ms ease-out; }
+.animate-view-slide-right { animation: view-slide-right 220ms ease-out; }
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-view-slide-up,
+  .animate-view-slide-down,
+  .animate-view-slide-left,
+  .animate-view-slide-right {
+    animation: none;
+  }
+}

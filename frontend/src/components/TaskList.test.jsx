@@ -58,16 +58,17 @@ describe('TaskList', () => {
     vi.clearAllMocks()
   })
 
-  it('shows a loading message while the store is loading', () => {
-    // A skeleton-loader version of this state is coming in a follow-up
-    // PR (the calendar/skeleton-loaders work), which will update both
-    // TaskList.jsx and this assertion together — matching main's
-    // *current* real rendering, not a not-yet-merged one, is what
-    // actually keeps CI green in the meantime.
+  it('shows skeleton rows (not a bare loading string) while the store is loading', () => {
+    // TaskList's own loading state moved from a plain "Loading tasks…"
+    // string to skeleton rows (see CLAUDE.md's "skeleton loaders
+    // required" rule and README's matching Engineering Decisions
+    // entry) — asserting on the pulsing placeholder's own aria-hidden
+    // marker rather than any text, since none of it carries real,
+    // readable content.
     mockStore({ status: 'loading' })
-    renderTaskList()
+    const { container } = renderTaskList()
 
-    expect(screen.getByText(/loading tasks/i)).toBeInTheDocument()
+    expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0)
   })
 
   it('shows an error message if the store failed to load', () => {

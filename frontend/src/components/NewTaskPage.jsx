@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { ArrowLeft, Pencil } from 'lucide-react'
 import { DeadlineEditor } from '@/components/DeadlineEditor'
 import { createTask } from '@/lib/tasks'
@@ -16,12 +16,24 @@ import { STATE_THEME } from '@/components/TaskDetailPage'
 // the progress dial, the mark-complete pill, and the activity spine.
 const theme = STATE_THEME.far
 
+// A plain 'YYYY-MM-DD' query param (CalendarPage links here with one
+// when you add a task from a specific day) becomes local midnight of
+// that day, matching DeadlineEditor's own "unchecked ⇒ local midnight"
+// convention for a date with no time of day picked yet. Ignored (falls
+// back to no deadline) if missing or malformed, rather than throwing.
+function parseDateParam(value) {
+  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null
+  const [year, month, day] = value.split('-').map(Number)
+  return new Date(year, month - 1, day, 0, 0, 0, 0).toISOString()
+}
+
 export function NewTaskPage() {
   const navigate = useNavigate()
   const { mergeTask } = useTaskStore()
+  const [searchParams] = useSearchParams()
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
-  const [dateDeadline, setDateDeadline] = useState(null)
+  const [dateDeadline, setDateDeadline] = useState(() => parseDateParam(searchParams.get('date')))
   const [editingDeadline, setEditingDeadline] = useState(false)
   const deadlineAnchorRef = useRef(null)
   const [error, setError] = useState(null)
