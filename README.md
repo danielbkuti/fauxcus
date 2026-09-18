@@ -58,7 +58,7 @@ Components:
 | Background jobs | Celery + Redis (local dev — see [Deployment](#deployment)) |
 | Containerization | Docker |
 | Authentication | Custom Django user model, session-cookie auth |
-| Testing | Django + DRF Test Framework |
+| Testing | Django + DRF Test Framework (backend), Vitest + React Testing Library (frontend) |
 
 ---
 
@@ -125,9 +125,9 @@ The deadline-digest scheduler is also handled differently in production than in 
 - Serializer validation
 
 ### Testing
-- API tests
-- Model integrity tests
-- Authentication tests
+- Backend: API tests, model integrity tests, authentication tests
+- Frontend: component tests (Vitest + React Testing Library) for `TaskCard`, `TaskList`, and the auth forms (`LoginForm`, the signup flow) — see [Running Tests](#running-tests)
+- Both suites run in CI on every push/PR (see [ci.yml](.github/workflows/ci.yml))
 
 ---
 
@@ -261,11 +261,19 @@ http://localhost:8637/api/
 
 # Running Tests
 
-Execute tests inside the Docker container:
+Backend — execute inside the Docker container:
 
 ```bash
 docker-compose exec web python backend/manage.py test
 ```
+
+Frontend — Vitest + React Testing Library, run from `frontend/`:
+
+```bash
+npm test
+```
+
+`npm run test:watch` re-runs on file changes for local development.
 
 ---
 
