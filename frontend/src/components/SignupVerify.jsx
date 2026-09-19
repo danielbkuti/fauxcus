@@ -23,6 +23,8 @@ function AuthField({
   error,
   autoComplete,
   required = true,
+  inputMode,
+  spellCheck,
 }) {
   const [visible, setVisible] = useState(false)
   const isPassword = type === 'password'
@@ -54,6 +56,8 @@ function AuthField({
             onBlur={onBlur}
             autoComplete={autoComplete}
             required={required}
+            inputMode={inputMode}
+            spellCheck={spellCheck}
             className="min-w-0 flex-1 border-0 bg-transparent p-0 text-sm text-black outline-none"
           />
           {isPassword && (
@@ -271,6 +275,8 @@ export function SignupVerify({ onSignupSuccess }) {
               onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
               focused={focusedField === 'code'}
               autoComplete="one-time-code"
+              inputMode="numeric"
+              spellCheck={false}
               {...focusHandlers('code')}
             />
 

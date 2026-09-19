@@ -94,6 +94,7 @@ export function ForgotPasswordForm() {
               onFocus={() => setFocused(true)}
               onBlur={() => setFocused(false)}
               autoComplete="email"
+              spellCheck={false}
               className="border-0 bg-transparent p-0 text-sm text-black outline-none"
               required
             />

@@ -120,7 +120,7 @@ describe('TaskList', () => {
     expect(screen.getByText('Done second')).toBeInTheDocument()
   })
 
-  it('filters to overdue tasks only, after dismissing the overdue gate', async () => {
+  it('filters to overdue tasks only, after dismissing the overdue banner', async () => {
     const user = userEvent.setup()
     mockStore({
       tasks: [
@@ -130,9 +130,10 @@ describe('TaskList', () => {
     })
     renderTaskList()
 
-    // An overdue task exists, so the blocking gate shows on mount —
-    // dismiss it before interacting with anything else on the page.
-    await user.click(screen.getByRole('button', { name: 'Close' }))
+    // An overdue task exists, so the (non-blocking, inline) overdue
+    // banner shows on mount — dismiss it to confirm that works too,
+    // even though it no longer blocks the filter interaction below.
+    await user.click(screen.getByRole('button', { name: 'Dismiss' }))
 
     await user.click(screen.getByRole('button', { name: 'Overdue' }))
 

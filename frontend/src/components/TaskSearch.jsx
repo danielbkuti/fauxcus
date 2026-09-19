@@ -183,6 +183,20 @@ export function TaskSearch() {
   const showResults = dateMode || (!digitsMode && query.trim().length > 0)
   const showDropdown = open && (showDateRow || showResults)
 
+  // Mirrors handleKeyDown's own notion of "row 0 is the date preview
+  // when there's no submitted date search yet" — activeIndex is a
+  // single flat cursor across whichever one of the two row sets is
+  // actually showing, so the id it maps to has to follow the same
+  // branch.
+  const activeOptionId =
+    digitsMode && !dateMode
+      ? activeIndex === 0 && datePreview
+        ? 'task-search-date-option'
+        : undefined
+      : activeIndex >= 0 && results[activeIndex]
+        ? `task-search-option-${activeIndex}`
+        : undefined
+
   return (
     <div ref={containerRef} className="relative w-full">
       {/* Fully rounded (pill) bar with a gradient outline — `.gradient-ring`
@@ -204,14 +218,28 @@ export function TaskSearch() {
           onKeyDown={handleKeyDown}
           placeholder="Search tasks…"
           readOnly={Boolean(dateMode)}
+          aria-label="Search tasks"
+          role="combobox"
+          aria-expanded={showDropdown}
+          aria-controls="task-search-listbox"
+          aria-autocomplete="list"
+          aria-activedescendant={activeOptionId}
           className="relative w-full rounded-full border-none bg-background py-2.5 pr-4 pl-10 text-sm outline-none"
         />
       </div>
 
       {showDropdown && (
-        <div className="absolute z-20 mt-1 w-full overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-md">
+        <div
+          id="task-search-listbox"
+          role="listbox"
+          aria-label="Search suggestions"
+          className="absolute z-20 mt-1 w-full overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-md"
+        >
           {showDateRow && (
             <button
+              id="task-search-date-option"
+              role="option"
+              aria-selected={activeIndex === 0}
               type="button"
               onMouseDown={(e) => e.preventDefault()}
               onClick={submitDatePreview}
@@ -234,6 +262,9 @@ export function TaskSearch() {
             results.map((c, i) => (
               <button
                 key={c.kind === 'task' ? `task-${c.task.id}` : `subtask-${c.subtask.id}`}
+                id={`task-search-option-${i}`}
+                role="option"
+                aria-selected={i === activeIndex}
                 type="button"
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={() => goToCandidate(c)}

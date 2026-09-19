@@ -65,6 +65,7 @@ export function AddSubtaskForm({ onAdd, onCancel, theme }) {
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="Add a subtask…"
+          aria-label="New subtask name"
           className="h-8 flex-1 bg-white text-xs"
           required
         />

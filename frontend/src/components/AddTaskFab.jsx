@@ -110,9 +110,9 @@ function ActionCard({ children, as: Tag = 'div', ...props }) {
 // The menu itself — option stack or whichever form it expands into —
 // still floats directly above the FAB rather than in a
 // centered dialog, so it visibly originates from the button that
-// opened it. The full-screen blurred backdrop still blocks the rest
-// of the page, same as OverdueGateModal; only the content's position
-// changed.
+// opened it. Its own full-screen blurred backdrop still blocks the rest
+// of the page while it's open — unlike OverdueBanner, this one really is
+// a modal interaction (a form being filled in), not an ambient summary.
 export function AddTaskFab() {
   // Shared with the rest of the authenticated shell (AddTaskFabContext)
   // rather than local state — so a page like CalendarPage's empty-day
@@ -281,7 +281,7 @@ export function AddTaskFab() {
               animation's own stagger order. */}
           <div
             onClick={(e) => e.stopPropagation()}
-            className="absolute right-6 bottom-24 flex flex-col-reverse items-end gap-2.5"
+            className="absolute bottom-24 left-1/2 flex -translate-x-1/2 flex-col-reverse items-center gap-2.5 sm:left-auto sm:right-6 sm:translate-x-0 sm:items-end"
           >
             {activeAction === null &&
               options.map((option, index) => (
@@ -324,6 +324,7 @@ export function AddTaskFab() {
                   rows={4}
                   autoFocus
                   placeholder="What's this task about?"
+                  aria-label="Description"
                   className="mt-3 w-full rounded-md border border-input bg-transparent p-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
                 />
                 {error && <p className="mt-2 text-xs text-destructive">{error}</p>}
@@ -365,6 +366,7 @@ export function AddTaskFab() {
                     value={calendarDraft.name}
                     onChange={(e) => setCalendarDraft((d) => ({ ...d, name: e.target.value }))}
                     placeholder="What is it?"
+                    aria-label="Event name"
                     autoFocus
                     required
                     className="w-full rounded-md border border-input bg-transparent px-2 py-1.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
@@ -392,6 +394,7 @@ export function AddTaskFab() {
                     value={calendarDraft.location}
                     onChange={(e) => setCalendarDraft((d) => ({ ...d, location: e.target.value }))}
                     placeholder="Location (optional)"
+                    aria-label="Location (optional)"
                     className="w-full rounded-md border border-input bg-transparent px-2 py-1.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
                   />
                 </div>
@@ -410,7 +413,12 @@ export function AddTaskFab() {
         </div>
       )}
 
-      <div className="fixed right-6 bottom-6 z-[101]">
+      {/* Centered on narrow viewports (below the `sm:grid-cols-3` breakpoint
+          Dashboard's own Quick-start cards use) rather than pinned to the
+          same bottom-right corner those cards' own right-aligned CTA pill
+          sits in — on a single-column mobile layout the two collide right
+          at initial scroll position, not just while scrolling past. */}
+      <div className="fixed bottom-6 left-1/2 z-[101] -translate-x-1/2 sm:left-auto sm:right-6 sm:translate-x-0">
         {/* Radial glow — always mounted (with its pulse animation always
             running) rather than conditionally rendered, so its opacity
             can crossfade on the same 420ms beat as everything else

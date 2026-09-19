@@ -217,7 +217,7 @@ function TaskPreviewRow({ label, stage, delayS = 0, hovered, reducedMotion }) {
 // parentName} shape so they can share a sorted list and a single row
 // renderer. `taskId` is always the *task's* id (itself, for a task row;
 // its parent's, for a subtask row) since only tasks have their own
-// detail page — same convention as OverdueGateModal's item list.
+// detail page — same convention as OverdueBanner's item list.
 function UpcomingRow({ item, celebrating, onToggle }) {
   const navigate = useNavigate()
   const [busy, setBusy] = useState(false)

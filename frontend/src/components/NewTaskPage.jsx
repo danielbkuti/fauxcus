@@ -151,6 +151,7 @@ export function NewTaskPage() {
                       value={name}
                       onChange={(e) => setName(e.target.value)}
                       placeholder="Task name…"
+                      aria-label="Task name"
                       autoFocus
                       required
                       className="w-full bg-transparent text-[27px] leading-[1.18] font-black tracking-[-0.025em] outline-none placeholder:text-black/25"
@@ -172,6 +173,7 @@ export function NewTaskPage() {
                       onChange={(e) => setDescription(e.target.value)}
                       rows={5}
                       placeholder="Add some context so this task still makes sense next week."
+                      aria-label="Description"
                       className="w-full max-w-[62ch] resize-y bg-transparent text-[14.5px] leading-[1.72] outline-none placeholder:text-muted-foreground"
                       style={{ color: 'oklch(0.28 0 0)' }}
                     />

@@ -541,7 +541,7 @@ export function SubtaskStackCard({
           // lightness as the card underneath it and all but
           // disappeared), not the extra thickness — keeping the colour,
           // dropping the thickness back down.
-          'absolute inset-x-0 flex items-center gap-2 rounded-lg border px-3 py-2 text-xs transition-all duration-300 ease-in-out',
+          'absolute inset-x-0 flex items-center gap-2 rounded-lg border px-3 py-2 text-xs transition-[color,background-color,border-color,box-shadow] duration-300 ease-in-out',
           dimmed
             ? 'bg-muted/60 text-muted-foreground shadow-none'
             : parentState !== 'progress'
@@ -591,7 +591,7 @@ export function SubtaskStackCard({
     <div
       className={cn(
         chrome.flood,
-        'relative rounded-lg text-xs transition-all duration-300 ease-in-out',
+        'relative rounded-lg text-xs transition-[color,background-color,border-color,box-shadow] duration-300 ease-in-out',
         showSubtaskBanner ? 'p-0' : 'flex flex-col gap-2 bg-card px-3 py-2 shadow-sm',
         chrome.heartbeat,
         justCompleted && 'animate-flash-emerald'
@@ -1124,14 +1124,8 @@ export function TaskCard({
 
       {deleteError && <p className="mt-2 text-xs text-destructive">{deleteError}</p>}
 
-      {/* ---- progress meter — hover reveals why it's not completable
-          yet, instead of a permanently-visible line of instructions ---- */}
-      <div className="group/progress relative mt-4">
-        {blockedFromCompleting && (
-          <div className="pointer-events-none absolute -top-8 left-0 z-10 rounded-md bg-foreground px-2 py-1 text-xs whitespace-nowrap text-background opacity-0 shadow-md transition-opacity duration-150 group-hover/progress:opacity-100">
-            Complete all subtasks to mark this task done.
-          </div>
-        )}
+      {/* ---- progress meter ---- */}
+      <div className="relative mt-4">
         <div
           className={cn(
             'h-2 w-full overflow-hidden rounded-full border',
@@ -1140,10 +1134,10 @@ export function TaskCard({
         >
           <div
             className={cn(
-              'relative h-full overflow-hidden rounded-full transition-all duration-500 ease-out',
+              'relative h-full w-full origin-left overflow-hidden rounded-full transition-transform duration-500 ease-out',
               FILL_CLASS[state] ?? PROGRESS_GRADIENT
             )}
-            style={{ width: `${progress}%` }}
+            style={{ transform: `scaleX(${progress / 100})` }}
           >
             {/* A shimmering sheen reads as healthy progress — dropped for
                 overdue/done, where a moving highlight would send the
@@ -1158,6 +1152,7 @@ export function TaskCard({
         </div>
         <p className={cn('mt-1 text-xs', state === 'progress' ? 'text-muted-foreground' : cn('font-bold', META_CLASS[state]))}>
           {progress}% complete
+          {blockedFromCompleting && ' · Complete all subtasks to mark this task done.'}
         </p>
       </div>
 

@@ -813,8 +813,8 @@ export function TaskDetailPage() {
                   </p>
                   <div className="mt-1.5 h-[5px] w-full overflow-hidden rounded-full" style={{ background: theme.soft }}>
                     <div
-                      className="h-full rounded-full transition-[width] duration-500 ease-out"
-                      style={{ width: `${Math.round(windowFraction * 100)}%`, background: theme.windowFill }}
+                      className="h-full w-full origin-left rounded-full transition-transform duration-500 ease-out"
+                      style={{ transform: `scaleX(${windowFraction})`, background: theme.windowFill }}
                     />
                   </div>
                   <p className="mt-1 text-[10.5px] font-bold" style={{ color: theme.strong }}>
