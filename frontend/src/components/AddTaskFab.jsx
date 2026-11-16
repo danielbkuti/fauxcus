@@ -7,6 +7,7 @@ import { createCalendarItem } from '@/lib/calendarItems'
 import { useTaskStore } from '@/context/TaskStoreContext'
 import { useAddTaskFab } from '@/context/AddTaskFabContext'
 import { cn } from '@/lib/utils'
+import { Starfield } from '@/components/Starfield'
 
 const EMPTY_CALENDAR_DRAFT = { name: '', dateStart: '', dateEnd: '', location: '' }
 
@@ -479,13 +480,16 @@ export function AddTaskFab() {
           // make hovering feel sluggish. Its own short inline transition
           // instead; doesn't conflict with the glyph's 420ms rotation
           // since that's a transform on a different element.
-          className="relative grid size-14 place-items-center overflow-hidden rounded-full fab-starfield shadow-lg hover:scale-105"
+          className="relative grid size-14 place-items-center overflow-hidden isolate rounded-full bg-[#05060b] shadow-lg hover:scale-105"
           style={{ transition: 'transform 150ms ease-out' }}
         >
-          {/* 1. Gradient field — the closed-state look. `fab-starfield`
-              (index.css) is the base layer underneath, always present;
-              this crossfades out on open to reveal it, since a
-              background-image change can't itself be transitioned. */}
+          {/* 1. Gradient field — the closed-state look. The starfield
+              is the base layer underneath, always present; this
+              crossfades out on open to reveal it, since a
+              background-image change can't itself be transitioned.
+              Finer pixels (2) than the banners' 4 so a 56px button
+              still holds a recognisable scatter of stars. */}
+          <Starfield pixelSize={2} shooting={false} />
           <span
             aria-hidden="true"
             className={cn(GRADIENT, 'absolute inset-0 rounded-full')}

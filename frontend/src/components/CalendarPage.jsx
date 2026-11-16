@@ -9,6 +9,7 @@ import { useTaskStore } from '@/context/TaskStoreContext'
 import { useAddTaskFab } from '@/context/AddTaskFabContext'
 import { Skeleton } from '@/components/ui/skeleton'
 import { FIRE_PAD, StreakCard, StreakFire } from '@/components/StreakFire'
+import { Starfield } from '@/components/Starfield'
 
 // Rebuilt per design_handoff_calendar_page/README.md ("Glass", direction
 // 1a) — rounded white day cards on a lilac-grey ground, colored deadline
@@ -1246,9 +1247,9 @@ export function CalendarPage() {
       <div className="mx-auto max-w-[1152px] px-6 pt-8 pb-14">
         {/* ---- hero ---- */}
         <div
-          className="relative overflow-hidden rounded-[18px] bg-cover bg-center p-[30px] shadow-[0_18px_40px_-28px_rgba(37,37,37,.65)]"
-          style={{ backgroundImage: 'url(/starfield-bg-wide.jpg)' }}
+          className="relative isolate overflow-hidden rounded-[18px] bg-[#05060b] p-[30px] shadow-[0_18px_40px_-28px_rgba(37,37,37,.65)]"
         >
+            <Starfield />
           <span aria-hidden="true" className="gradient-ring" style={{ zIndex: 3 }} />
           <div className="relative z-[2] flex flex-col gap-[26px]">
             <div className="flex flex-wrap items-start justify-between gap-5">

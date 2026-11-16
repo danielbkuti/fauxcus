@@ -3,6 +3,7 @@ import { cn } from '@/lib/utils'
 // design export, see lib/pixel-fire.js). Imported for its side effect —
 // evaluated once, however many streak surfaces mount.
 import '@/lib/pixel-fire.js'
+import { Starfield } from '@/components/Starfield'
 
 // Pixel-fire bed that sits along the bottom edge of anything showing a
 // streak (design_export "streak card 2a"). The parent must be
@@ -51,9 +52,9 @@ export function StreakCard({ streak, dueToday }) {
   const lit = streak > 0
   return (
     <div
-      className={cn('relative overflow-hidden rounded-[14px] bg-cover bg-center p-[18px] text-white', lit && FIRE_PAD.card)}
-      style={{ backgroundImage: 'url(/starfield-bg.jpg)' }}
+      className={cn('relative isolate overflow-hidden rounded-[14px] bg-[#05060b] p-[18px] text-white', lit && FIRE_PAD.card)}
     >
+      <Starfield shooting={false} />
       <StreakFire streak={streak} />
       <span aria-hidden="true" className="gradient-ring" style={{ zIndex: 3 }} />
       <div className="relative z-[2] flex flex-col gap-2">

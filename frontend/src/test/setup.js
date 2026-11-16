@@ -1,6 +1,13 @@
-import { afterEach } from 'vitest'
+import { afterEach, vi } from 'vitest'
 import { cleanup } from '@testing-library/react'
 import '@testing-library/jest-dom/vitest'
+
+// <starfield-8bit> (src/lib/starfield-8bit.js) needs ResizeObserver and a
+// real canvas, neither of which jsdom has. Every surface that carries the
+// starfield (nav, footer, heroes, the FAB) can be mounted by some test, so
+// it's stubbed once here — <starfield-8bit> then stays an inert unknown
+// element, which is all those tests need.
+vi.mock('@/lib/starfield-8bit.js', () => ({}))
 
 // jsdom has no PointerEvent implementation at all — @base-ui/react's
 // Checkbox (src/components/ui/checkbox.jsx, used by LoginForm's

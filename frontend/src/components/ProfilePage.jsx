@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
 import { fetchProfile, updateProfile, changePassword, deleteAccount, logout } from '@/lib/auth'
 import { formatDeadline } from '@/lib/utils'
+import { Starfield } from '@/components/Starfield'
 
 // Same shape as ResetPasswordForm/SignupVerify's own splitErrors — a
 // Django `form.errors.get_json_data()` payload is `{field: [{message,
@@ -190,9 +191,9 @@ export function ProfilePage() {
           generic skeleton block into a completely different-looking
           hero once the fetch resolves. */}
       <div
-        className="relative overflow-hidden rounded-[18px] bg-cover bg-center p-[26px] shadow-[0_18px_40px_-28px_rgba(37,37,37,.65)]"
-        style={{ backgroundImage: 'url(/starfield-bg.jpg)' }}
+        className="relative isolate overflow-hidden rounded-[18px] bg-[#05060b] p-[26px] shadow-[0_18px_40px_-28px_rgba(37,37,37,.65)]"
       >
+        <Starfield />
         <span aria-hidden="true" className="gradient-ring" style={{ zIndex: 3 }} />
         <div className="relative z-[2] flex items-center gap-4">
           <div className="flex size-14 shrink-0 items-center justify-center rounded-full bg-white/10 outline outline-1 -outline-offset-1 outline-white/20 backdrop-blur-[6px]">
