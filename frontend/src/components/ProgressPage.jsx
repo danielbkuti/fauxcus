@@ -5,6 +5,7 @@ import { useTaskStore } from '@/context/TaskStoreContext'
 import { formatDeadline } from '@/lib/utils'
 import { computeStats, computePeriodStats, formatDuration, formatPercent } from '@/lib/stats'
 import { TaskSearch } from '@/components/TaskSearch'
+import { FIRE_PAD, StreakFire } from '@/components/StreakFire'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
 
@@ -254,19 +255,22 @@ function StatsBand({ stats, periodStats, period, onPeriodChange }) {
             <Sparkline dailyActivity={habits.dailyActivity} />
           </GlassPanel>
 
-          <GlassPanel>
-            <PanelFigure label="Current streak" value={`${habits.currentStreak} day${habits.currentStreak === 1 ? '' : 's'}`}>
-              <div className="mt-1 flex gap-[5px]">
-                {last7.map((d) => (
-                  <span
-                    key={d.date.toISOString()}
-                    className="size-3.5 rounded-[5px]"
-                    style={{ background: streakDays.has(d.date.toDateString()) ? '#56a456' : 'rgba(255,255,255,.14)' }}
-                    title={d.date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
-                  />
-                ))}
-              </div>
-            </PanelFigure>
+          <GlassPanel className={cn('relative overflow-hidden', habits.currentStreak > 0 && FIRE_PAD.panel)}>
+            <StreakFire streak={habits.currentStreak} size="tile" />
+            <div className="relative z-[2] h-full">
+              <PanelFigure label="Current streak" value={`${habits.currentStreak} day${habits.currentStreak === 1 ? '' : 's'}`}>
+                <div className="mt-1 flex gap-[5px]">
+                  {last7.map((d) => (
+                    <span
+                      key={d.date.toISOString()}
+                      className="size-3.5 rounded-[5px]"
+                      style={{ background: streakDays.has(d.date.toDateString()) ? '#56a456' : 'rgba(255,255,255,.14)' }}
+                      title={d.date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                    />
+                  ))}
+                </div>
+              </PanelFigure>
+            </div>
           </GlassPanel>
 
           <GlassPanel>

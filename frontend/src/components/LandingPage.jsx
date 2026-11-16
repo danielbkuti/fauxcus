@@ -4,6 +4,7 @@ import { ArrowRight, Bell, Check, Search } from 'lucide-react'
 import { Logo } from '@/components/Logo'
 import { Footer } from '@/components/Footer'
 import { ConfettiBurst } from '@/components/ConfettiBurst'
+import { FIRE_PAD, StreakFire } from '@/components/StreakFire'
 import { checkEmailExists } from '@/lib/auth'
 import { cn } from '@/lib/utils'
 
@@ -789,12 +790,13 @@ function StatsBand() {
                 ))}
               </div>
             </div>
-            <div className="flex flex-col gap-3 rounded-2xl bg-white/9 p-6 shadow-[inset_0_1px_0_rgba(255,255,255,.28),inset_0_0_0_1px_rgba(255,255,255,.12)] backdrop-blur-[10px]">
-              <span className="text-xs font-bold text-white/60">Current streak</span>
-              <span className="font-display text-[38px] leading-none font-semibold tracking-[-.04em] tabular-nums">
+            <div className={cn('relative flex flex-col gap-3 overflow-hidden rounded-2xl bg-white/9 p-6 shadow-[inset_0_1px_0_rgba(255,255,255,.28),inset_0_0_0_1px_rgba(255,255,255,.12)] backdrop-blur-[10px]', FIRE_PAD.panel)}>
+              <StreakFire streak={7} size="tile" />
+              <span className="relative z-[2] text-xs font-bold text-white/60">Current streak</span>
+              <span className="relative z-[2] font-display text-[38px] leading-none font-semibold tracking-[-.04em] tabular-nums">
                 7 days
               </span>
-              <div className="flex gap-[5px]">
+              <div className="relative z-[2] flex gap-[5px]">
                 {Array.from({ length: 7 }).map((_, i) => (
                   <span key={i} className="size-3.5 rounded-[5px] bg-[#56a456]" />
                 ))}

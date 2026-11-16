@@ -8,6 +8,7 @@ import { computeStats } from '@/lib/stats'
 import { useTaskStore } from '@/context/TaskStoreContext'
 import { useAddTaskFab } from '@/context/AddTaskFabContext'
 import { Skeleton } from '@/components/ui/skeleton'
+import { FIRE_PAD, StreakCard, StreakFire } from '@/components/StreakFire'
 
 // Rebuilt per design_handoff_calendar_page/README.md ("Glass", direction
 // 1a) — rounded white day cards on a lilac-grey ground, colored deadline
@@ -319,18 +320,22 @@ function useClock() {
   return now
 }
 
-function StatCard({ value, label, flame, loading }) {
+// `streak` (a day count) turns on the pixel-fire bed — only the "Day
+// streak" tile passes it; every other tile is a plain number.
+function StatCard({ value, label, flame, streak = 0, loading }) {
+  const lit = !loading && streak > 0
   return (
-    <div className="flex min-w-[120px] flex-1 flex-col gap-[3px] rounded-[12px] bg-white/8 p-[14px_18px] shadow-[inset_0_0_0_1px_rgba(255,255,255,.16)] backdrop-blur-[6px]">
+    <div className={cn('relative flex min-w-[120px] flex-1 flex-col gap-[3px] overflow-hidden rounded-[12px] bg-white/8 p-[14px_18px] shadow-[inset_0_0_0_1px_rgba(255,255,255,.16)] backdrop-blur-[6px]', lit && FIRE_PAD.tile)}>
+      {lit && <StreakFire streak={streak} size="tile" />}
       {loading ? (
         <span aria-hidden="true" className="block h-[26px] w-9 animate-pulse rounded-md bg-white/20" />
       ) : (
-        <span className="flex items-center gap-1.5 font-display text-[26px] font-bold tracking-[-.02em] text-white tabular-nums">
+        <span className="relative z-[2] flex items-center gap-1.5 font-display text-[26px] font-bold tracking-[-.02em] text-white tabular-nums">
           {value}
           {flame && <Flame className="size-[18px] fill-orange-400 text-orange-400" aria-hidden="true" />}
         </span>
       )}
-      <span className="text-[11px] font-bold uppercase tracking-[.07em] text-white/60">{label}</span>
+      <span className="relative z-[2] text-[11px] font-bold uppercase tracking-[.07em] text-white/60">{label}</span>
     </div>
   )
 }
@@ -982,26 +987,6 @@ function GoalsRailCard() {
   )
 }
 
-function StreakRailCard({ currentStreak, dueToday }) {
-  return (
-    <div
-      className="relative overflow-hidden rounded-[14px] bg-cover bg-center p-[18px] text-white"
-      style={{ backgroundImage: 'url(/starfield-bg.jpg)' }}
-    >
-      <span aria-hidden="true" className="gradient-ring" style={{ zIndex: 3 }} />
-      <div className="relative z-[2] flex flex-col gap-2">
-        <span className="text-[11px] font-bold uppercase tracking-[.09em] text-white/60">This week</span>
-        <span className="font-display text-xl font-semibold tracking-[-.02em]">
-          {currentStreak > 0 ? `You're on a ${currentStreak}-day streak.` : "Check something off to start a streak."}
-        </span>
-        <span className="text-xs text-white/60">
-          {dueToday > 0 ? `${dueToday} more due today — keep it going.` : 'A clean slate today. One task keeps it alive.'}
-        </span>
-      </div>
-    </div>
-  )
-}
-
 export function CalendarPage() {
   const { tasks, refreshTasks } = useTaskStore()
   const { currentStreak } = computeStats(tasks).habits
@@ -1317,7 +1302,7 @@ export function CalendarPage() {
               <StatCard value={periodStats.due} label={statLabel} loading={loading} />
               <StatCard value={periodStats.overdue} label="Overdue" loading={loading} />
               <StatCard value={periodStats.completed} label="Completed" loading={loading} />
-              <StatCard value={currentStreak} label="Day streak" flame={currentStreak > 0} />
+              <StatCard value={currentStreak} label="Day streak" flame={currentStreak > 0} streak={currentStreak} />
             </div>
           </div>
         </div>
@@ -1434,7 +1419,7 @@ export function CalendarPage() {
               onAddClick={() => openAddForDay(viewingDate)}
             />
             <GoalsRailCard />
-            <StreakRailCard currentStreak={currentStreak} dueToday={dueTodayCount} />
+            <StreakCard streak={currentStreak} dueToday={dueTodayCount} />
           </div>
         </div>
       </div>
