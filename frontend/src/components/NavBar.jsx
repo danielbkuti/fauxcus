@@ -4,6 +4,7 @@ import { User, LogOut } from 'lucide-react'
 import { Logo } from '@/components/Logo'
 import { NotificationBell } from '@/components/NotificationBell'
 import { cn } from '@/lib/utils'
+import { Starfield } from '@/components/Starfield'
 
 const NAV_LINKS = [
   { to: '/home', label: 'Home' },
@@ -73,22 +74,19 @@ export function NavBar({ firstName, onLogout }) {
         )}
         aria-hidden="true"
       />
-      {/* Starfield layer — hidden at rest, fades in on scroll. The *wide*
-          export (2400px, starfield-bg-wide.jpg) rather than the small one
-          the logo itself uses — this layer spans the full viewport width,
-          and `background-size: cover` on a 1000px source stretched across
-          a ~1280px+ bar was upscaling it past its native resolution,
-          which read as grainy/soft. Not actually "zoomed in" in the
-          cropping sense (a wide short bar against a roughly-square image
-          barely crops at all), just a too-small source being blown up. */}
+      {/* Starfield layer — hidden at rest, fades in on scroll. Always
+          mounted (the crossfade needs both layers present); its
+          shooting-star timer is switched off, since a bar this short has
+          nowhere for one to go. */}
       <div
         className={cn(
-          'absolute inset-0 bg-cover bg-center shadow-sm transition-opacity duration-500 ease-in-out',
+          'absolute inset-0 isolate overflow-hidden bg-[#05060b] shadow-sm transition-opacity duration-500 ease-in-out',
           scrolled ? 'opacity-100' : 'opacity-0'
         )}
-        style={{ backgroundImage: 'url(/starfield-bg-wide.jpg)' }}
         aria-hidden="true"
-      />
+      >
+        <Starfield shooting={false} />
+      </div>
 
       <div className="relative z-10 mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
         <NavLink to="/home" className="relative inline-flex" aria-label="Fauxcus home">

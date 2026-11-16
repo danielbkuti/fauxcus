@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { Logo } from '@/components/Logo'
+import { Starfield } from '@/components/Starfield'
 
 const GITHUB_REPO = 'https://github.com/danielbkuti/fauxcus'
 
@@ -42,12 +43,10 @@ const COLUMNS = [
 export function Footer() {
   return (
     <footer
-      className="relative mt-16 bg-cover bg-center pt-20 pb-10 text-neutral-300"
-      style={{
-        backgroundImage: 'url(/starfield-bg-wide.jpg)',
-        clipPath: 'polygon(0 40px, 100% 0, 100% 100%, 0 100%)',
-      }}
+      className="relative isolate mt-16 bg-[#05060b] pt-20 pb-10 text-neutral-300"
+      style={{ clipPath: 'polygon(0 40px, 100% 0, 100% 100%, 0 100%)' }}
     >
+      <Starfield shooting={false} />
       <div className="mx-auto grid max-w-6xl grid-cols-2 gap-x-8 gap-y-10 px-6 sm:grid-cols-3">
         {COLUMNS.map((column) => (
           <div key={column.heading}>

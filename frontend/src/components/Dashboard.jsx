@@ -10,6 +10,7 @@ import { useDeadlineStatus } from '@/hooks/useDeadlineStatus'
 import { updateTask, updateSubTask } from '@/lib/tasks'
 import { useTaskStore } from '@/context/TaskStoreContext'
 import { computeStats } from '@/lib/stats'
+import { Starfield } from '@/components/Starfield'
 
 // Ticks slowly (same 30s "slow tick" interval useDeadlineStatus already
 // uses for its own non-urgent case) — plenty for a clock that only
@@ -468,9 +469,9 @@ export function Dashboard({ firstName, username, justLoggedIn, onWelcomeSeen }) 
           uses (.gradient-ring, index.css), just sized up for the hero's
           own radius via `border-radius: inherit`. */}
       <div
-        className="relative overflow-hidden rounded-[18px] bg-cover bg-center p-[30px] shadow-[0_18px_40px_-28px_rgba(37,37,37,.65)]"
-        style={{ backgroundImage: 'url(/starfield-bg-wide.jpg)' }}
+        className="relative isolate overflow-hidden rounded-[18px] bg-[#05060b] p-[30px] shadow-[0_18px_40px_-28px_rgba(37,37,37,.65)]"
       >
+          <Starfield />
         <span aria-hidden="true" className="gradient-ring" style={{ zIndex: 3 }} />
         <div className="relative z-[2] flex flex-col gap-[26px]">
           <div className="flex items-start justify-between gap-5">

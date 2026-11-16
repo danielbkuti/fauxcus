@@ -232,17 +232,6 @@
   mask-composite: exclude;
 }
 
-/* --- AddTaskFab: starfield field ------------------------------------------
-   The button's base layer, always present underneath the gradient field
-   (AddTaskFab.jsx) — that layer's opacity crossfades on press to reveal
-   this one, since a background-image swap can't itself be transitioned.
-   See fab-motion-handoff.md. */
-.fab-starfield {
-  background-image: url('/starfield-bg.jpg');
-  background-size: cover;
-  background-position: center;
-}
-
 /* --- TaskCard: glass lustre --------------------------------------------
    Two soft directional washes over the card surface, in the same two
    gradient stops the progress bar already uses. Layered under the card's
