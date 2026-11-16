@@ -23,9 +23,9 @@ import { cn } from '@/lib/utils'
 //     For dark, starfield or photographic grounds — this app's dark
 //     Footer, and NavBar's scrolled state.
 const SCALES = {
-  primary: { fontSize: 74, tileRadius: 34, padding: '24px 44px', chip: 44, chipRadius: 12, check: 26, checkStroke: 3.4, gap: 28 },
-  secondary: { fontSize: 32, tileRadius: 16, padding: '10px 21px', chip: 20, chipRadius: 6, check: 12, checkStroke: 4.2, gap: 14 },
-  icon: { fontSize: 17, tileRadius: 8.5, padding: '5px 12px', chip: 12, chipRadius: 4, check: 8, checkStroke: 4.5, gap: 8 },
+  primary: { fontSize: 96, tileRadius: 34, padding: '24px 44px', chip: 44, chipRadius: 12, check: 26, checkStroke: 3.4, gap: 28 },
+  secondary: { fontSize: 42, tileRadius: 16, padding: '10px 21px', chip: 20, chipRadius: 6, check: 12, checkStroke: 4.2, gap: 14 },
+  icon: { fontSize: 22, tileRadius: 8.5, padding: '5px 12px', chip: 12, chipRadius: 4, check: 8, checkStroke: 4.5, gap: 8 },
 }
 
 const BRAND_GRADIENT = 'linear-gradient(to bottom right, #e0c3fc, #7c5fb0, #8ec5fc)'
@@ -90,7 +90,7 @@ export function Logo({ variant = 'color', scale = 'secondary', sizeScale = 1, cl
 
       <span
         className="font-display relative block leading-none font-bold whitespace-nowrap text-white"
-        style={{ fontSize: s.fontSize, letterSpacing: '-.035em' }}
+        style={{ fontSize: s.fontSize, letterSpacing: '.01em' }}
       >
         Fauxcus
       </span>

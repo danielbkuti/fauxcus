@@ -58,8 +58,8 @@ export function StreakCard({ streak, dueToday }) {
       <StreakFire streak={streak} />
       <span aria-hidden="true" className="gradient-ring" style={{ zIndex: 3 }} />
       <div className="relative z-[2] flex flex-col gap-2">
-        <span className="text-[11px] font-bold uppercase tracking-[.09em] text-white/60">This week</span>
-        <span className="font-display text-[20px] font-semibold tracking-[-.02em]">
+        <span className="text-[14px] font-bold uppercase tracking-[.09em] text-white/60">This week</span>
+        <span className="font-display text-[26px] font-semibold">
           {lit ? `You're on a ${streak}-day streak.` : 'Check something off to start a streak.'}
         </span>
         <span className="text-xs text-white/60">

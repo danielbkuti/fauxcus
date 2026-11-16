@@ -225,13 +225,13 @@ function StateBanner({ state, message, action, radiusClass = 'rounded-t-2xl' }) 
         style={chrome.glyphBeat ? { animationDuration: chrome.glyphBeat } : undefined}
         aria-hidden="true"
       />
-      <span className="flex-1 text-[12.5px] font-black tracking-[0.01em] tabular-nums">{message}</span>
+      <span className="flex-1 text-[16px] font-black tracking-[0.01em] tabular-nums">{message}</span>
       {action && (
         <button
           type="button"
           onClick={action.onClick}
           className={cn(
-            'shrink-0 rounded-full border border-white/[0.55] bg-white/[0.16] px-3 py-1 text-[11.5px] font-bold whitespace-nowrap transition-colors hover:bg-white',
+            'shrink-0 rounded-full border border-white/[0.55] bg-white/[0.16] px-3 py-1 text-[15px] font-bold whitespace-nowrap transition-colors hover:bg-white',
             BANNER_ACTION_HOVER_TEXT[state]
           )}
         >
@@ -416,7 +416,7 @@ export function SubtaskStackCard({
               toggleDeadlineEditor()
             }}
             className={cn(
-              'relative rounded-full px-2 py-0.5 text-[11px] font-medium tabular-nums transition-colors',
+              'relative rounded-full px-2 py-0.5 text-[14px] font-medium tabular-nums transition-colors',
               countdown.isOverdue
                 ? 'bg-red-700 text-white hover:bg-red-800'
                 : countdown.isUrgent
@@ -466,7 +466,7 @@ export function SubtaskStackCard({
               e.stopPropagation()
               toggleDeadlineEditor()
             }}
-            className="relative rounded-full bg-[#f3e8ff] px-2 py-0.5 text-[11px] font-medium text-[#6b46a8] transition-colors hover:bg-[#e9d5ff]"
+            className="relative rounded-full bg-[#f3e8ff] px-2 py-0.5 text-[14px] font-medium text-[#6b46a8] transition-colors hover:bg-[#e9d5ff]"
           >
             Set deadline
           </button>
@@ -488,13 +488,13 @@ export function SubtaskStackCard({
               onClick={(e) => e.stopPropagation()}
               className="absolute top-full right-0 z-20 mt-1 w-44 rounded-lg border bg-card p-2.5 text-left shadow-lg"
             >
-              <p className="text-[11px] text-muted-foreground">Are you sure you want to delete this subtask?</p>
+              <p className="text-[14px] text-muted-foreground">Are you sure you want to delete this subtask?</p>
               <div className="mt-2 flex justify-end gap-2">
                 <button
                   type="button"
                   onClick={() => setConfirmingDelete(false)}
                   disabled={deleting}
-                  className="text-[11px] text-muted-foreground hover:underline"
+                  className="text-[14px] text-muted-foreground hover:underline"
                 >
                   Cancel
                 </button>
@@ -502,7 +502,7 @@ export function SubtaskStackCard({
                   type="button"
                   onClick={handleDeleteConfirm}
                   disabled={deleting}
-                  className="text-[11px] font-medium text-destructive hover:underline"
+                  className="text-[14px] font-medium text-destructive hover:underline"
                 >
                   {deleting ? 'Deleting…' : 'Delete'}
                 </button>
@@ -608,7 +608,7 @@ export function SubtaskStackCard({
         <button
           type="button"
           onClick={partOf.onClick}
-          className="flex w-fit items-center gap-1 text-[11px] text-muted-foreground transition-colors hover:text-sky-600"
+          className="flex w-fit items-center gap-1 text-[14px] text-muted-foreground transition-colors hover:text-sky-600"
         >
           <CornerDownRight className="size-3.5 shrink-0" aria-hidden="true" />
           <span className="truncate">{partOf.label}</span>

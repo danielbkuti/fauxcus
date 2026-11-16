@@ -36,7 +36,7 @@ const PERIODS = [
 function CardHead({ eyebrow, note }) {
   return (
     <div className="mb-5 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-      <span className="text-[11px] font-bold tracking-[.14em] text-[#33224a]/50 uppercase">{eyebrow}</span>
+      <span className="text-[14px] font-bold tracking-[.14em] text-[#33224a]/50 uppercase">{eyebrow}</span>
       {note && <span className="text-xs text-[#241a33]/45">{note}</span>}
     </div>
   )
@@ -95,7 +95,7 @@ function PanelFigure({ label, value, caption, children }) {
   return (
     <div className="flex h-full flex-col gap-2">
       <span className="text-xs font-bold text-white/60">{label}</span>
-      <span className="font-display text-[38px] leading-none font-semibold tracking-[-.04em] text-white tabular-nums">
+      <span className="font-display text-[49px] leading-none font-semibold text-white tabular-nums">
         {value}
       </span>
       {caption && <span className="text-xs text-white/55">{caption}</span>}
@@ -114,8 +114,8 @@ function SpecRow({ label, value, valueClassName, last }) {
           : 'inset 0 1px 0 rgba(255,255,255,.14)',
       }}
     >
-      <span className="text-[13px] text-white/60">{label}</span>
-      <span className={cn('font-display text-[13px] font-semibold tabular-nums', valueClassName ?? 'text-white')}>
+      <span className="text-[17px] text-white/60">{label}</span>
+      <span className={cn('font-display text-[17px] font-semibold tabular-nums', valueClassName ?? 'text-white')}>
         {value}
       </span>
     </div>
@@ -154,7 +154,7 @@ function Sparkline({ dailyActivity }) {
           )
         })}
       </div>
-      <span className="text-[11px] font-bold tracking-[.1em] text-white/55 uppercase">Closed, last 7 days</span>
+      <span className="text-[14px] font-bold tracking-[.1em] text-white/55 uppercase">Closed, last 7 days</span>
     </div>
   )
 }
@@ -198,8 +198,8 @@ function StatsBand({ stats, periodStats, period, onPeriodChange }) {
     <section className="text-white" style={{ background: 'linear-gradient(170deg,#3b2856,#33224a 55%,#271a3a)' }}>
       <div className="mx-auto grid max-w-[1180px] grid-cols-1 gap-14 px-6 py-16 sm:px-10 lg:grid-cols-[440px_1fr] lg:items-start lg:gap-16 lg:py-[84px]">
         <div className="flex flex-col gap-5">
-          <span className="text-[11px] font-bold tracking-[.18em] text-white/50 uppercase">Progress</span>
-          <h1 className="font-display m-0 max-w-[16ch] text-[36px] leading-[1.02] font-semibold tracking-[-.045em] text-balance sm:text-[52px]">
+          <span className="text-[14px] font-bold tracking-[.18em] text-white/50 uppercase">Progress</span>
+          <h1 className="font-display m-0 max-w-[16ch] text-[47px] leading-[1.02] font-semibold text-balance sm:text-[68px]">
             Counted while you worked.
           </h1>
           <p className="m-0 max-w-[36ch] text-base leading-[1.6] text-white/68">
@@ -217,7 +217,7 @@ function StatsBand({ stats, periodStats, period, onPeriodChange }) {
                 tabIndex={period === p.key ? 0 : -1}
                 onClick={() => onPeriodChange(p.key)}
                 className={cn(
-                  'rounded-[11px] px-4 py-[9px] text-[13px] font-bold transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50',
+                  'rounded-[11px] px-4 py-[9px] text-[17px] font-bold transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50',
                   period === p.key ? 'bg-[#f0eee9] text-[#33224a]' : 'bg-white/9 text-white/72'
                 )}
                 style={{ boxShadow: 'inset 0 1px 0 rgba(255,255,255,.28), inset 0 0 0 1px rgba(255,255,255,.12)' }}
@@ -243,7 +243,7 @@ function StatsBand({ stats, periodStats, period, onPeriodChange }) {
           <GlassPanel className="flex flex-col gap-6 sm:col-span-2 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex flex-col gap-1.5">
               <span className="text-xs font-bold text-white/60">Completion rate · {periodLabel}</span>
-              <span className="font-display text-[60px] leading-none font-semibold tracking-[-.045em] tabular-nums">
+              <span className="font-display text-[78px] leading-none font-semibold tabular-nums">
                 {periodStats.completionRate != null ? formatPercent(periodStats.completionRate) : DASH}
               </span>
               <span className="text-xs text-white/55">
@@ -336,7 +336,7 @@ function WeeklyActivityChart({ weekly }) {
     <GlassCard>
       <CardHead eyebrow="Weekly activity" note={`Last ${weekly.length} weeks`} />
       <div className="flex gap-2">
-        <div className="flex flex-col justify-between py-0 text-right text-[10px] font-bold text-[#241a33]/32" style={{ height: plotH }}>
+        <div className="flex flex-col justify-between py-0 text-right text-[13px] font-bold text-[#241a33]/32" style={{ height: plotH }}>
           {[...gridVals].reverse().map((v) => (
             <span key={v}>{Math.round(v)}</span>
           ))}
@@ -367,17 +367,17 @@ function WeeklyActivityChart({ weekly }) {
               <g key={w.label}>
                 <path d={topRoundedRectPath(createdX, plotH - createdH, barW, createdH, 7)} fill="rgba(51,34,74,.2)" />
                 {w.created > 0 && (
-                  <text x={createdX + barW / 2} y={plotH - createdH + 15} textAnchor="middle" className="font-display" style={{ fontSize: 11, fontWeight: 600, fill: 'rgba(36,26,51,.6)' }}>
+                  <text x={createdX + barW / 2} y={plotH - createdH + 15} textAnchor="middle" className="font-display" style={{ fontSize: 14, fontWeight: 600, fill: 'rgba(36,26,51,.6)' }}>
                     {w.created}
                   </text>
                 )}
                 <path d={topRoundedRectPath(completedX, plotH - completedH, barW, completedH, 7)} fill="url(#weeklyClosedGradient)" />
                 {w.completed > 0 && (
-                  <text x={completedX + barW / 2} y={plotH - completedH + 15} textAnchor="middle" className="font-display" style={{ fontSize: 11, fontWeight: 600, fill: '#fff' }}>
+                  <text x={completedX + barW / 2} y={plotH - completedH + 15} textAnchor="middle" className="font-display" style={{ fontSize: 14, fontWeight: 600, fill: '#fff' }}>
                     {w.completed}
                   </text>
                 )}
-                <text x={cx} y={chartH - 4} textAnchor="middle" style={{ fontSize: 12, fill: 'rgba(36,26,51,.5)' }}>
+                <text x={cx} y={chartH - 4} textAnchor="middle" style={{ fontSize: 16, fill: 'rgba(36,26,51,.5)' }}>
                   {w.label}
                 </text>
               </g>
@@ -425,10 +425,10 @@ function OverviewStackedBar({ overview }) {
         <>
           <div className="flex flex-1 flex-col justify-center gap-4">
             <div className="flex items-baseline gap-2">
-              <span className="font-display text-[46px] leading-none font-semibold tracking-[-.04em]">
+              <span className="font-display text-[60px] leading-none font-semibold">
                 {formatPercent(overview.completionRate)}
               </span>
-              <span className="text-[13px] text-[#241a33]/55">closed</span>
+              <span className="text-[17px] text-[#241a33]/55">closed</span>
             </div>
             <div
               className="flex h-[18px] gap-[3px] rounded-full p-0.5"
@@ -453,7 +453,7 @@ function OverviewStackedBar({ overview }) {
                   className="flex items-baseline justify-between gap-4 py-[13px]"
                   style={{ boxShadow: i < segments.length - 1 ? 'inset 0 -1px 0 rgba(51,34,74,.1)' : undefined }}
                 >
-                  <span className="flex items-center gap-2 text-[13px] text-[#241a33]/75">
+                  <span className="flex items-center gap-2 text-[17px] text-[#241a33]/75">
                     <span className="size-2.5 rounded-[3px]" style={{ background: s.gradient }} />
                     {s.label}
                   </span>
@@ -471,7 +471,7 @@ function OverviewStackedBar({ overview }) {
             <Link
               to="/tasks"
               state={{ filter: 'overdue' }}
-              className="group mt-auto flex items-center gap-2 pt-4 text-[13px] font-bold text-[#33224a] transition-[gap] duration-150 hover:gap-[11px]"
+              className="group mt-auto flex items-center gap-2 pt-4 text-[17px] font-bold text-[#33224a] transition-[gap] duration-150 hover:gap-[11px]"
             >
               Open the {overdueCount} overdue
               <ArrowRight className="size-3.5" strokeWidth={3} aria-hidden="true" />
@@ -541,7 +541,7 @@ function DailyHeatmap({ dailyActivity }) {
         <div className="flex gap-3.5" style={{ width: 'fit-content' }}>
           <div className="flex flex-col justify-between pt-[17px]" style={{ width: 26, gap: 4 }}>
             {WEEKDAY_GUTTER.map((label, i) => (
-              <span key={i} className="flex h-[13px] items-center text-[10px] font-bold text-[#241a33]/40">
+              <span key={i} className="flex h-[13px] items-center text-[13px] font-bold text-[#241a33]/40">
                 {label}
               </span>
             ))}
@@ -549,7 +549,7 @@ function DailyHeatmap({ dailyActivity }) {
           <div>
             <div className="mb-1.5 flex" style={{ gap: 4 }}>
               {monthLabels.map((label, i) => (
-                <span key={i} className="text-[10px] font-bold tracking-[.1em] text-[#241a33]/38 uppercase" style={{ width: 13 }}>
+                <span key={i} className="text-[13px] font-bold tracking-[.1em] text-[#241a33]/38 uppercase" style={{ width: 13 }}>
                   {label}
                 </span>
               ))}
@@ -582,11 +582,11 @@ function DailyHeatmap({ dailyActivity }) {
         </div>
       </div>
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-        <p className="m-0 max-w-[52ch] text-[13px] leading-[1.55] text-[#241a33]/60">
+        <p className="m-0 max-w-[52ch] text-[17px] leading-[1.55] text-[#241a33]/60">
           The ringed square is today. An unbroken run of filled squares up to it is the current
           streak.
         </p>
-        <div className="flex items-center gap-[7px] text-[11px] font-bold text-[#241a33]/45">
+        <div className="flex items-center gap-[7px] text-[14px] font-bold text-[#241a33]/45">
           Less
           {HEAT_LEVEL_FILL.map((fill, i) => (
             <span key={i} className="size-2.5 rounded-[2px]" style={{ background: fill }} />
@@ -647,7 +647,7 @@ function DayOfWeekDistribution({ data }) {
                   </linearGradient>
                 </defs>
               </svg>
-              <span className={cn('text-[11px] font-bold', isBest ? 'text-[#33224a]' : 'text-[#241a33]/55')}>
+              <span className={cn('text-[14px] font-bold', isBest ? 'text-[#33224a]' : 'text-[#241a33]/55')}>
                 {d.label}
               </span>
             </div>
@@ -709,7 +709,7 @@ function ArchiveColumn({ eyebrow, items, renderRow, emptyLabel }) {
   return (
     <div className="flex flex-col">
       <div className="mb-2 flex items-baseline justify-between gap-3">
-        <span className="text-[11px] font-bold tracking-[.14em] text-[#33224a]/50 uppercase">
+        <span className="text-[14px] font-bold tracking-[.14em] text-[#33224a]/50 uppercase">
           {eyebrow} · {items.length}
         </span>
         {items.length > CAP && (
@@ -821,7 +821,7 @@ export function ProgressPage() {
       {tasks.length > 0 && (
         <section className="mx-auto max-w-[1180px] px-6 pt-16 sm:px-10 sm:pt-[88px]">
           <div className="flex flex-col gap-3 border-b border-[#33224a]/14 pb-[26px] sm:flex-row sm:items-end sm:justify-between">
-            <h2 className="font-display m-0 max-w-[22ch] text-[28px] leading-[1.04] font-semibold tracking-[-.04em] sm:text-[40px]">
+            <h2 className="font-display m-0 max-w-[22ch] text-[36px] leading-[1.04] font-semibold sm:text-[52px]">
               How the weeks actually go
             </h2>
             <p className="m-0 max-w-[30ch] text-sm leading-[1.6] text-[#241a33]/60">
@@ -850,7 +850,7 @@ export function ProgressPage() {
 
       <section className="mx-auto max-w-[1180px] px-6 pt-16 pb-[104px] sm:px-10 sm:pt-[88px]">
         <div className="flex flex-col gap-4 border-b border-[#33224a]/14 pb-[26px] sm:flex-row sm:items-end sm:justify-between">
-          <h2 className="font-display m-0 text-[28px] leading-[1.04] font-semibold tracking-[-.04em] sm:text-[40px]">
+          <h2 className="font-display m-0 text-[36px] leading-[1.04] font-semibold sm:text-[52px]">
             Everything you&apos;ve closed
           </h2>
           <div className="w-full sm:w-[340px]">

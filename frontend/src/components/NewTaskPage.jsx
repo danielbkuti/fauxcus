@@ -91,7 +91,7 @@ export function NewTaskPage() {
               </Link>
 
               <div ref={deadlineAnchorRef} className="relative">
-                <p className="text-[10px] font-black tracking-[.12em] uppercase" style={{ color: theme.strong }}>
+                <p className="text-[13px] font-black tracking-[.12em] uppercase" style={{ color: theme.strong }}>
                   Deadline
                 </p>
                 {editingDeadline && (
@@ -110,7 +110,7 @@ export function NewTaskPage() {
                     className="group mt-1 flex w-full items-center justify-between rounded-xl border bg-white px-3 py-2 text-left"
                     style={{ borderColor: theme.hairline }}
                   >
-                    <span className="text-[13px] font-black" style={{ color: theme.title }}>
+                    <span className="text-[17px] font-black" style={{ color: theme.title }}>
                       {dateDeadline ? formatDeadline(dateDeadline) : 'Set deadline (optional)'}
                     </span>
                     <Pencil className="size-3.5 shrink-0" style={{ color: theme.strong }} aria-hidden="true" />
@@ -119,11 +119,11 @@ export function NewTaskPage() {
               </div>
 
               <div className="mt-auto flex flex-col gap-2 pt-2">
-                {error && <p className="text-[11px] text-destructive">{error}</p>}
+                {error && <p className="text-[14px] text-destructive">{error}</p>}
                 <button
                   type="submit"
                   disabled={submitting || !name.trim()}
-                  className="w-full rounded-full px-[18px] py-[11px] text-[13.5px] font-black text-white disabled:opacity-60"
+                  className="w-full rounded-full px-[18px] py-[11px] text-[18px] font-black text-white disabled:opacity-60"
                   style={{ background: theme.cta, boxShadow: theme.ctaShadow }}
                 >
                   {submitting ? 'Creating…' : 'Create task'}
@@ -154,7 +154,7 @@ export function NewTaskPage() {
                       aria-label="Task name"
                       autoFocus
                       required
-                      className="w-full bg-transparent text-[27px] leading-[1.18] font-black tracking-[-0.025em] outline-none placeholder:text-black/25"
+                      className="w-full bg-transparent text-[35px] leading-[1.18] font-black outline-none placeholder:text-black/25"
                       style={{ color: theme.title }}
                     />
                   </div>
@@ -174,7 +174,7 @@ export function NewTaskPage() {
                       rows={5}
                       placeholder="Add some context so this task still makes sense next week."
                       aria-label="Description"
-                      className="w-full max-w-[62ch] resize-y bg-transparent text-[14.5px] leading-[1.72] outline-none placeholder:text-muted-foreground"
+                      className="w-full max-w-[62ch] resize-y bg-transparent text-[19px] leading-[1.72] outline-none placeholder:text-muted-foreground"
                       style={{ color: 'oklch(0.28 0 0)' }}
                     />
                   </div>
@@ -196,7 +196,7 @@ export function NewTaskPage() {
 function SectionHeader({ label, hairline, strong }) {
   return (
     <div className="flex items-center gap-2.5">
-      <h2 className="text-[11px] font-black tracking-[.12em] uppercase" style={{ color: strong }}>
+      <h2 className="text-[14px] font-black tracking-[.12em] uppercase" style={{ color: strong }}>
         {label}
       </h2>
       <span className="h-px flex-1" style={{ background: `linear-gradient(90deg,${hairline},rgba(255,255,255,0))` }} />

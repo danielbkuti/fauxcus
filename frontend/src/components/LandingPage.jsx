@@ -81,7 +81,7 @@ function EmailCaptureForm({ variant = 'light', idPrefix }) {
           placeholder="you@work.com"
           required
           className={cn(
-            'min-w-0 flex-1 rounded-[11px] px-[18px] py-[14px] text-[15px] outline-none focus-visible:ring-2 focus-visible:ring-[#7c5fb0]/50',
+            'min-w-0 flex-1 rounded-[11px] px-[18px] py-[14px] text-[20px] outline-none focus-visible:ring-2 focus-visible:ring-[#7c5fb0]/50',
             dark
               ? 'bg-white/12 text-white placeholder:text-white/50 shadow-[inset_0_1px_0_rgba(255,255,255,.25),inset_0_0_0_1px_rgba(255,255,255,.16)]'
               : 'bg-white/90 text-[#241a33] placeholder:text-[#241a33]/40 shadow-[inset_0_1px_0_rgba(255,255,255,.9),inset_0_0_0_1px_rgba(51,34,74,.12)]'
@@ -91,7 +91,7 @@ function EmailCaptureForm({ variant = 'light', idPrefix }) {
           type="submit"
           disabled={checking}
           className={cn(
-            'shrink-0 px-[22px] py-[15px] text-[15px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7c5fb0]/50',
+            'shrink-0 px-[22px] py-[15px] text-[20px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7c5fb0]/50',
             dark ? 'light-btn' : 'plum-btn'
           )}
         >
@@ -166,14 +166,14 @@ function Header() {
 function Hero() {
   return (
     <section className="mx-auto max-w-[1180px] px-6 pt-16 sm:px-10 sm:pt-[104px]">
-      <span className="block text-[11px] font-bold tracking-[.18em] text-[#33224a]/50 uppercase">
+      <span className="block text-[14px] font-bold tracking-[.18em] text-[#33224a]/50 uppercase">
         Tasks · Subtasks · Deadlines
       </span>
       {/* One line, not the design handoff's deliberate two-line wrap —
           no max-width/text-balance fighting it, and sized down enough
           at each breakpoint to actually fit the phrase on one line
           rather than just hoping it does. */}
-      <h1 className="font-display mt-[26px] text-[32px] leading-[.94] font-semibold tracking-[-.05em] whitespace-nowrap text-[#241a33] sm:text-[56px] lg:text-[88px]">
+      <h1 className="font-display mt-[26px] text-[42px] leading-[.94] font-semibold whitespace-nowrap text-[#241a33] sm:text-[73px] lg:text-[114px]">
         Nothing slips through.
       </h1>
       <div className="mt-11 grid grid-cols-1 items-end gap-12 lg:grid-cols-[1fr_420px] lg:gap-16">
@@ -198,10 +198,10 @@ function Hero() {
               key={row.term}
               className="flex items-baseline justify-between gap-4 border-b border-[#33224a]/14 py-[13px]"
             >
-              <dt className="text-[13px] text-[#241a33]/60">{row.term}</dt>
+              <dt className="text-[17px] text-[#241a33]/60">{row.term}</dt>
               <dd
                 className={cn(
-                  'font-display m-0 text-[13px] font-semibold',
+                  'font-display m-0 text-[17px] font-semibold',
                   row.muted ? 'text-[#241a33]/35' : 'text-[#33224a]'
                 )}
               >
@@ -246,7 +246,7 @@ function ProductShot() {
               <span className="size-2.5 rounded-full bg-[#33224a]/16" />
             </span>
             <span className="flex flex-1 justify-center">
-              <span className="rounded-lg bg-[#33224a]/6 px-4 py-1 text-[11px] font-bold text-[#33224a]/50">
+              <span className="rounded-lg bg-[#33224a]/6 px-4 py-1 text-[14px] font-bold text-[#33224a]/50">
                 app.fauxcus.com
               </span>
             </span>
@@ -259,10 +259,10 @@ function ProductShot() {
           >
             <div aria-hidden="true">
               <div className="mb-[22px] flex items-baseline justify-between">
-                <h2 className="font-display m-0 text-2xl font-semibold tracking-[-.035em] text-[#241a33] sm:text-[34px]">
+                <h2 className="font-display m-0 text-2xl font-semibold text-[#241a33] sm:text-[44px]">
                   Welcome back, Sam
                 </h2>
-                <span className="hidden text-[13px] text-[#241a33]/45 sm:inline">
+                <span className="hidden text-[17px] text-[#241a33]/45 sm:inline">
                   Thursday, September 3 · 8:57 AM
                 </span>
               </div>
@@ -276,7 +276,7 @@ function ProductShot() {
                       'inset 0 1px 0 rgba(255,255,255,.75), inset 0 0 0 1px rgba(255,255,255,.35), inset 0 -18px 34px -22px rgba(0,0,0,.35), 0 16px 30px -20px rgba(124,95,176,.55)',
                   }}
                 >
-                  <div className="flex items-center justify-between text-[11px] font-bold">
+                  <div className="flex items-center justify-between text-[14px] font-bold">
                     <span>Task</span>
                     <span className="font-display font-semibold text-[#33224a]/72 tabular-nums">
                       7 done today
@@ -287,17 +287,17 @@ function ProductShot() {
                       <span className="flex size-[13px] shrink-0 items-center justify-center rounded-[4px] bg-[#33224a] text-[#e0c3fc]">
                         <Check className="size-[9px]" strokeWidth={4} />
                       </span>
-                      <span className="text-[11px] font-bold text-[#33224a]/70 line-through">
+                      <span className="text-[14px] font-bold text-[#33224a]/70 line-through">
                         Draft the outline
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="size-[13px] shrink-0 rounded-[4px] border-[1.5px] border-[#33224a]/45 bg-[#33224a]/10" />
-                      <span className="text-[11px] font-bold">Renew passport</span>
+                      <span className="text-[14px] font-bold">Renew passport</span>
                     </div>
                   </div>
                   <div className="flex items-end justify-between gap-2.5">
-                    <h3 className="font-display m-0 max-w-[110px] text-[17px] font-semibold tracking-[-.025em]">
+                    <h3 className="font-display m-0 max-w-[110px] text-[22px] font-semibold">
                       Start a new task
                     </h3>
                     <span className="plum-btn px-3 py-2 text-xs">New task</span>
@@ -312,22 +312,22 @@ function ProductShot() {
                       'inset 0 1px 0 rgba(255,255,255,.75), inset 0 0 0 1px rgba(255,255,255,.35), inset 0 -18px 34px -22px rgba(0,0,0,.35), 0 16px 30px -20px rgba(124,95,176,.6)',
                   }}
                 >
-                  <div className="flex items-center justify-between text-[11px] font-bold">
+                  <div className="flex items-center justify-between text-[14px] font-bold">
                     <span>Goal</span>
                     <span className="font-display font-semibold text-white/82 tabular-nums">3 active</span>
                   </div>
                   <div className="flex flex-col gap-2 rounded-[10px] bg-black/20 p-3">
                     <div className="flex items-baseline justify-between">
-                      <span className="text-[11px] font-bold">Ship v2</span>
+                      <span className="text-[14px] font-bold">Ship v2</span>
                       <span className="font-display text-sm font-semibold tabular-nums">82%</span>
                     </div>
                     <div className="h-[7px] overflow-hidden rounded-full bg-white/25">
                       <span className="block h-full w-[82%] rounded-full bg-white" />
                     </div>
-                    <span className="text-[10px] font-bold text-white/80">9 of 11 tasks · ends Sep 30</span>
+                    <span className="text-[13px] font-bold text-white/80">9 of 11 tasks · ends Sep 30</span>
                   </div>
                   <div className="flex items-end justify-between gap-2.5">
-                    <h3 className="font-display m-0 max-w-[110px] text-[17px] font-semibold tracking-[-.025em]">
+                    <h3 className="font-display m-0 max-w-[110px] text-[22px] font-semibold">
                       Start a new goal
                     </h3>
                     <span className="light-btn px-3 py-2 text-xs">New goal</span>
@@ -342,7 +342,7 @@ function ProductShot() {
                       'inset 0 1px 0 rgba(255,255,255,.75), inset 0 0 0 1px rgba(255,255,255,.35), inset 0 -18px 34px -22px rgba(0,0,0,.35), 0 16px 30px -20px rgba(142,197,252,.75)',
                   }}
                 >
-                  <div className="flex items-center justify-between text-[11px] font-bold">
+                  <div className="flex items-center justify-between text-[14px] font-bold">
                     <span>Calendar</span>
                     <span className="font-display font-semibold text-[#12314b]/75 tabular-nums">September</span>
                   </div>
@@ -351,17 +351,17 @@ function ProductShot() {
                       {[31, 1, 2, 3, 4, 5, 6].map((d, i) => (
                         <span
                           key={i}
-                          className="flex h-5 items-center justify-center rounded-[5px] text-[10px] font-bold"
+                          className="flex h-5 items-center justify-center rounded-[5px] text-[13px] font-bold"
                           style={d === 3 ? { background: '#12314b', color: '#8ec5fc' } : { background: 'rgba(18,49,75,.1)' }}
                         >
                           {d}
                         </span>
                       ))}
                     </div>
-                    <span className="text-[10px] font-bold text-[#12314b]/75">4 due today · 2 tomorrow</span>
+                    <span className="text-[13px] font-bold text-[#12314b]/75">4 due today · 2 tomorrow</span>
                   </div>
                   <div className="flex items-end justify-between gap-2.5">
-                    <h3 className="font-display m-0 max-w-[110px] text-[17px] font-semibold tracking-[-.025em]">
+                    <h3 className="font-display m-0 max-w-[110px] text-[22px] font-semibold">
                       View your calendar
                     </h3>
                     <span
@@ -392,10 +392,10 @@ function ProductShot() {
                   <span aria-hidden="true" className="task-ring" />
                   <span className="size-[17px] shrink-0 rounded-[5px] border-[1.5px] border-[#e2e0da]" />
                   <div className="flex flex-1 flex-col gap-0.5">
-                    <span className="text-[13px] font-bold">Draft the outline</span>
-                    <span className="text-[11px] text-[#8e8e8e]">Part of Finish the Q3 report</span>
+                    <span className="text-[17px] font-bold">Draft the outline</span>
+                    <span className="text-[14px] text-[#8e8e8e]">Part of Finish the Q3 report</span>
                   </div>
-                  <span className="rounded-full bg-[#fef2f2] px-2.5 py-[3px] text-[11px] font-bold text-[#b91c1c]">
+                  <span className="rounded-full bg-[#fef2f2] px-2.5 py-[3px] text-[14px] font-bold text-[#b91c1c]">
                     Due in 03:41:12
                   </span>
                 </div>
@@ -403,9 +403,9 @@ function ProductShot() {
                   <span aria-hidden="true" className="task-ring" />
                   <span className="size-[17px] shrink-0 rounded-[5px] border-[1.5px] border-[#e2e0da]" />
                   <div className="flex flex-1 flex-col gap-0.5">
-                    <span className="text-[13px] font-bold">Renew passport</span>
+                    <span className="text-[17px] font-bold">Renew passport</span>
                   </div>
-                  <span className="rounded-full bg-[#b91c1c] px-2.5 py-[3px] text-[11px] font-bold text-white">
+                  <span className="rounded-full bg-[#b91c1c] px-2.5 py-[3px] text-[14px] font-bold text-white">
                     Overdue
                   </span>
                 </div>
@@ -413,9 +413,9 @@ function ProductShot() {
                   <span aria-hidden="true" className="task-ring" />
                   <span className="size-[17px] shrink-0 rounded-[5px] border-[1.5px] border-[#e2e0da]" />
                   <div className="flex flex-1 flex-col gap-0.5">
-                    <span className="text-[13px] font-bold">Book the dentist</span>
+                    <span className="text-[17px] font-bold">Book the dentist</span>
                   </div>
-                  <span className="rounded-full bg-[#f3e8ff] px-2.5 py-[3px] text-[11px] font-bold text-[#6b46a8]">
+                  <span className="rounded-full bg-[#f3e8ff] px-2.5 py-[3px] text-[14px] font-bold text-[#6b46a8]">
                     Sep 24, 2026
                   </span>
                 </div>
@@ -439,7 +439,7 @@ function FeatureGrid() {
   return (
     <section id="features" className="mx-auto max-w-[1180px] px-6 pt-20 sm:px-10 sm:pt-[112px]">
       <div className="flex flex-col gap-6 border-b border-[#33224a]/14 pb-7 sm:flex-row sm:items-end sm:justify-between">
-        <h2 className="font-display m-0 max-w-[20ch] text-[36px] leading-[1.02] font-semibold tracking-[-.04em] sm:text-[52px]">
+        <h2 className="font-display m-0 max-w-[20ch] text-[47px] leading-[1.02] font-semibold sm:text-[68px]">
           Five things it does. Nothing it doesn&apos;t.
         </h2>
         <p className="m-0 max-w-[28ch] text-sm leading-[1.6] text-[#241a33]/60">
@@ -451,7 +451,7 @@ function FeatureGrid() {
         <div className="glass-card flex flex-col justify-between gap-7 p-8">
           <div className="flex flex-col gap-3">
             <span className="font-display text-xs font-semibold tracking-[.14em] text-[#7c5fb0]/85">01</span>
-            <h3 className="font-display m-0 max-w-[22ch] text-[29px] font-semibold tracking-[-.03em]">
+            <h3 className="font-display m-0 max-w-[22ch] text-[38px] font-semibold">
               Subtasks that finish the job for you
             </h3>
             <p className="m-0 max-w-[40ch] text-sm leading-[1.6] text-[#241a33]/65">
@@ -494,7 +494,7 @@ function FeatureGrid() {
         <div className="glass-card flex flex-col justify-between gap-7 p-8">
           <div className="flex flex-col gap-3">
             <span className="font-display text-xs font-semibold tracking-[.14em] text-[#7c5fb0]/85">02</span>
-            <h3 className="font-display m-0 max-w-[16ch] text-[29px] font-semibold tracking-[-.03em]">
+            <h3 className="font-display m-0 max-w-[16ch] text-[38px] font-semibold">
               The deadline lives on the card
             </h3>
             <p className="m-0 text-sm leading-[1.6] text-[#241a33]/65">
@@ -513,9 +513,9 @@ function FeatureGrid() {
                 className="relative flex items-center justify-between gap-3 rounded-[14px] bg-card px-[14px] py-3 shadow-[0_1px_2px_rgba(37,37,37,.05)]"
               >
                 <span aria-hidden="true" className="task-ring" />
-                <span className="relative text-[13px] font-bold">{row.name}</span>
+                <span className="relative text-[17px] font-bold">{row.name}</span>
                 <span
-                  className="relative rounded-full px-2.5 py-[3px] text-[11px] font-bold tabular-nums"
+                  className="relative rounded-full px-2.5 py-[3px] text-[14px] font-bold tabular-nums"
                   style={{ background: row.bg, color: row.color }}
                 >
                   {row.pill}
@@ -529,8 +529,8 @@ function FeatureGrid() {
       <div className="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-3">
         <div className="glass-tile flex flex-col gap-3.5 p-[26px]">
           <span className="font-display text-xs font-semibold tracking-[.14em] text-[#7c5fb0]/85">03</span>
-          <h3 className="font-display m-0 text-[21px] font-semibold tracking-[-.025em]">Find anything fast</h3>
-          <p className="m-0 text-[13px] leading-[1.6] text-[#241a33]/65">
+          <h3 className="font-display m-0 text-[27px] font-semibold">Find anything fast</h3>
+          <p className="m-0 text-[17px] leading-[1.6] text-[#241a33]/65">
             Live search across every task and subtask by name — or type a date and jump to
             what&apos;s due then.
           </p>
@@ -541,15 +541,15 @@ function FeatureGrid() {
         </div>
         <div className="glass-tile flex flex-col gap-3.5 p-[26px]">
           <span className="font-display text-xs font-semibold tracking-[.14em] text-[#7c5fb0]/85">04</span>
-          <h3 className="font-display m-0 text-[21px] font-semibold tracking-[-.025em]">Goals with a real bar</h3>
-          <p className="m-0 text-[13px] leading-[1.6] text-[#241a33]/65">
+          <h3 className="font-display m-0 text-[27px] font-semibold">Goals with a real bar</h3>
+          <p className="m-0 text-[17px] leading-[1.6] text-[#241a33]/65">
             Group tasks under a goal and watch the percentage move as they close. No manual
             status updates.
           </p>
           <div className="mt-1 flex flex-col gap-[7px]">
             <div className="flex items-baseline justify-between">
               <span className="text-xs font-bold">Ship v2</span>
-              <span className="font-display text-[13px] font-semibold text-[#7c5fb0] tabular-nums">82%</span>
+              <span className="font-display text-[17px] font-semibold text-[#7c5fb0] tabular-nums">82%</span>
             </div>
             <div className="h-1.5 overflow-hidden rounded-full bg-[#33224a]/8">
               <span
@@ -561,8 +561,8 @@ function FeatureGrid() {
         </div>
         <div className="glass-tile flex flex-col gap-3.5 p-[26px]">
           <span className="font-display text-xs font-semibold tracking-[.14em] text-[#7c5fb0]/85">05</span>
-          <h3 className="font-display m-0 text-[21px] font-semibold tracking-[-.025em]">Reminders that arrive</h3>
-          <p className="m-0 text-[13px] leading-[1.6] text-[#241a33]/65">
+          <h3 className="font-display m-0 text-[27px] font-semibold">Reminders that arrive</h3>
+          <p className="m-0 text-[17px] leading-[1.6] text-[#241a33]/65">
             A nudge before a deadline lands, and a gate that makes you deal with overdue work
             before piling on more.
           </p>
@@ -633,7 +633,7 @@ function ClosingParentFrame() {
           </span>
           <span className="text-sm font-medium text-muted-foreground line-through">Finish the Q3 report</span>
         </span>
-        <span className="rounded-full bg-[#d1fae5] px-2 py-[3px] text-[10px] font-bold text-[#047857]">done</span>
+        <span className="rounded-full bg-[#d1fae5] px-2 py-[3px] text-[13px] font-bold text-[#047857]">done</span>
       </div>
       <div className="relative pl-[26px]">
         <FilmstripRow label="Send for review" checked />
@@ -651,7 +651,7 @@ function WatchItWork() {
   return (
     <section className="mx-auto max-w-[1180px] px-6 pt-20 sm:px-10 sm:pt-[112px]">
       <div className="flex flex-col gap-4 border-b border-[#33224a]/14 pb-7 sm:flex-row sm:items-end sm:justify-between">
-        <h2 className="font-display m-0 max-w-[18ch] text-[36px] leading-[1.02] font-semibold tracking-[-.04em] sm:text-[52px]">
+        <h2 className="font-display m-0 max-w-[18ch] text-[47px] leading-[1.02] font-semibold sm:text-[68px]">
           Watch it work
         </h2>
         <p className="m-0 max-w-[30ch] text-sm leading-[1.6] text-[#241a33]/60">
@@ -711,7 +711,7 @@ function WatchItWork() {
 function HowItWorks() {
   return (
     <section id="how" className="mx-auto max-w-[1180px] px-6 pt-20 sm:px-10 sm:pt-[112px]">
-      <h2 className="font-display m-0 max-w-[20ch] text-[36px] leading-[1.02] font-semibold tracking-[-.04em] sm:text-[52px]">
+      <h2 className="font-display m-0 max-w-[20ch] text-[47px] leading-[1.02] font-semibold sm:text-[68px]">
         Set up in about a minute
       </h2>
       <div className="mt-11 grid grid-cols-1 border-t border-[#33224a]/16 sm:grid-cols-3">
@@ -724,10 +724,10 @@ function HowItWorks() {
               i === 0 ? 'sm:pr-[34px] sm:pl-0' : i === HOW_STEPS.length - 1 ? 'sm:pr-0 sm:pl-[34px]' : 'sm:px-[34px]'
             )}
           >
-            <span className="font-display text-[44px] leading-none font-semibold tracking-[-.05em] text-[#33224a]/16 sm:text-[60px]">
+            <span className="font-display text-[57px] leading-none font-semibold text-[#33224a]/16 sm:text-[78px]">
               {String(i + 1).padStart(2, '0')}
             </span>
-            <h3 className="font-display m-0 text-[22px] font-semibold tracking-[-.025em]">{step.title}</h3>
+            <h3 className="font-display m-0 text-[29px] font-semibold">{step.title}</h3>
             <p className="m-0 text-sm leading-[1.6] text-[#241a33]/65">{step.body}</p>
           </div>
         ))}
@@ -746,8 +746,8 @@ function StatsBand() {
     <section className="mt-20 text-white sm:mt-[112px]" style={{ background: 'linear-gradient(170deg,#3b2856,#33224a 55%,#271a3a)' }}>
       <div className="mx-auto grid max-w-[1180px] grid-cols-1 items-center gap-14 px-6 py-16 sm:px-10 lg:grid-cols-2 lg:gap-[72px] lg:py-24">
         <div className="flex flex-col gap-[22px]">
-          <span className="text-[11px] font-bold tracking-[.18em] text-white/50 uppercase">Progress</span>
-          <h2 className="font-display m-0 max-w-[18ch] text-[32px] leading-[1.02] font-semibold tracking-[-.04em] sm:text-[52px]">
+          <span className="text-[14px] font-bold tracking-[.18em] text-white/50 uppercase">Progress</span>
+          <h2 className="font-display m-0 max-w-[18ch] text-[42px] leading-[1.02] font-semibold sm:text-[68px]">
             Your habits, measured without being asked about
           </h2>
           <p className="m-0 max-w-[38ch] text-base leading-[1.6] text-white/68">
@@ -765,14 +765,14 @@ function StatsBand() {
         </div>
 
         <div aria-hidden="true" className="flex flex-col gap-2">
-          <span className="self-end text-[10px] font-bold tracking-[.1em] text-white/35 uppercase">
+          <span className="self-end text-[13px] font-bold tracking-[.1em] text-white/35 uppercase">
             Example account
           </span>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-4 rounded-2xl bg-white/9 p-6 shadow-[inset_0_1px_0_rgba(255,255,255,.28),inset_0_0_0_1px_rgba(255,255,255,.12)] backdrop-blur-[10px] sm:col-span-2 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
               <div className="flex flex-col gap-1.5">
                 <span className="text-xs font-bold text-white/60">Completion rate · 30 days</span>
-                <span className="font-display text-[44px] leading-none font-semibold tracking-[-.04em] tabular-nums sm:text-[52px]">
+                <span className="font-display text-[57px] leading-none font-semibold tabular-nums sm:text-[68px]">
                   68%
                 </span>
                 <span className="text-xs text-white/55">124 of 182 tasks closed on time</span>
@@ -793,7 +793,7 @@ function StatsBand() {
             <div className={cn('relative flex flex-col gap-3 overflow-hidden rounded-2xl bg-white/9 p-6 shadow-[inset_0_1px_0_rgba(255,255,255,.28),inset_0_0_0_1px_rgba(255,255,255,.12)] backdrop-blur-[10px]', FIRE_PAD.panel)}>
               <StreakFire streak={7} size="tile" />
               <span className="relative z-[2] text-xs font-bold text-white/60">Current streak</span>
-              <span className="relative z-[2] font-display text-[38px] leading-none font-semibold tracking-[-.04em] tabular-nums">
+              <span className="relative z-[2] font-display text-[49px] leading-none font-semibold tabular-nums">
                 7 days
               </span>
               <div className="relative z-[2] flex gap-[5px]">
@@ -804,7 +804,7 @@ function StatsBand() {
             </div>
             <div className="flex flex-col gap-3 rounded-2xl bg-white/9 p-6 shadow-[inset_0_1px_0_rgba(255,255,255,.28),inset_0_0_0_1px_rgba(255,255,255,.12)] backdrop-blur-[10px]">
               <span className="text-xs font-bold text-white/60">Most productive</span>
-              <span className="font-display text-[38px] leading-none font-semibold tracking-[-.04em] tabular-nums">
+              <span className="font-display text-[49px] leading-none font-semibold tabular-nums">
                 9–11am
               </span>
               <span className="text-xs text-white/55">41% of everything you close</span>
@@ -825,7 +825,7 @@ function ClosingCTA() {
       >
         <div className="grid grid-cols-1 items-center gap-10 lg:grid-cols-[1.15fr_.85fr] lg:gap-[60px]">
           <div className="flex flex-col gap-[18px]">
-            <h2 className="font-display m-0 max-w-[16ch] text-[36px] leading-[1.02] font-semibold tracking-[-.045em] sm:text-[56px]">
+            <h2 className="font-display m-0 max-w-[16ch] text-[47px] leading-[1.02] font-semibold sm:text-[73px]">
               Start closing things out.
             </h2>
             <p className="m-0 max-w-[36ch] text-base leading-[1.6] text-white/68">
