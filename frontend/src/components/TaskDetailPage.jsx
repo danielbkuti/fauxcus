@@ -913,14 +913,14 @@ export function TaskDetailPage() {
                   }}
                 </SubtaskFlipList>
               ) : (
-                <p className="text-sm text-muted-foreground">No subtasks yet.</p>
+                <p className="font-body text-[15px] text-muted-foreground">No subtasks yet.</p>
               )}
 
               <div ref={subtaskSectionRef}>
                 {addingSubtask ? (
                   <AddSubtaskForm onAdd={handleAddSubtask} onCancel={() => setAddingSubtask(false)} theme={theme} />
                 ) : !hasSubtasks ? (
-                  <p className="text-sm text-muted-foreground">
+                  <p className="font-body text-[15px] text-muted-foreground">
                     Want to break this down into smaller chunks?{' '}
                     <button type="button" onClick={openAddSubtask} className="font-bold hover:underline" style={{ color: theme.strong }}>
                       Add subtasks
@@ -1225,7 +1225,7 @@ function DescriptionPanel({ description, onSave, border, strong }) {
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
               rows={5}
-              className="w-full max-w-[62ch] resize-y bg-transparent text-[19px] leading-[1.72] outline-none"
+              className="w-full max-w-[62ch] resize-y bg-transparent font-body text-[17px] leading-[1.7] outline-none"
               style={{ color: 'oklch(0.28 0 0)' }}
               placeholder="Add some context so this task still makes sense next week."
             />
@@ -1258,7 +1258,7 @@ function DescriptionPanel({ description, onSave, border, strong }) {
               <Pencil className="size-[15px]" aria-hidden="true" />
             </button>
             <p
-              className="max-w-[62ch] text-[19px] leading-[1.72] whitespace-pre-wrap"
+              className="max-w-[62ch] font-body text-[17px] leading-[1.7] whitespace-pre-wrap"
               style={{ color: 'oklch(0.28 0 0)', textWrap: 'pretty' }}
             >
               {description}
@@ -1268,7 +1268,7 @@ function DescriptionPanel({ description, onSave, border, strong }) {
           // The whole empty-state line is the click target now, not
           // just the "Add some context" words — a blank box with only
           // a few words of it actually clickable read as broken.
-          <button type="button" onClick={startEditing} className="block w-full text-left text-sm" style={{ color: 'oklch(0.556 0 0)' }}>
+          <button type="button" onClick={startEditing} className="block w-full text-left font-body text-[15px]" style={{ color: 'oklch(0.556 0 0)' }}>
             No description yet.{' '}
             <span className="font-bold" style={{ color: strong }}>
               Add some context
@@ -1475,7 +1475,7 @@ function DetailSubtaskRow({ index, subtask, checked, confetti, busy, theme, onTo
         <button
           type="button"
           onClick={() => setRenaming(true)}
-          className="min-w-0 flex-1 truncate text-left text-sm font-bold"
+          className="min-w-0 flex-1 truncate text-left font-body text-[15px] font-semibold"
           style={{ color: checked ? 'oklch(0.556 0 0)' : rowPalette.title, textDecoration: checked ? 'line-through' : 'none' }}
         >
           {subtask.name}
@@ -1798,10 +1798,10 @@ function ActivityLog({ entries, theme }) {
                 aria-hidden="true"
               />
             </span>
-            <p className="text-sm leading-[1.4] font-bold" style={{ color: 'oklch(0.28 0 0)' }}>
+            <p className="font-body text-[14px] leading-[1.4] font-semibold" style={{ color: 'oklch(0.28 0 0)' }}>
               {row.count > 1 ? collapsedLabel(row.kind, row.count) : row.message}
             </p>
-            <p className="text-xs font-bold" style={{ color: theme.muted }}>
+            <p className="font-body text-[12px] font-semibold" style={{ color: theme.muted }}>
               {formatActivityTime(row.dateCreated)}
             </p>
           </div>
