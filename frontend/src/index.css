@@ -40,6 +40,12 @@
        working, but it resolves to the same face. */
     --font-sans: 'Jersey 10', sans-serif;
     --font-display: var(--font-sans);
+    /* Spectral is the reading face: the descriptive text inside task
+       cards and task details (`font-body`). It has real weights and a
+       normal x-height, so — unlike Jersey 10 — it does NOT want the 1.3x
+       bumped text scale; elements using it carry their own (smaller)
+       explicit size next to the `font-body` class. */
+    --font-body: 'Spectral', Georgia, serif;
     --color-sidebar-ring: var(--sidebar-ring);
     --color-sidebar-border: var(--sidebar-border);
     --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
