@@ -4,6 +4,7 @@ import { SquarePlus, Target, CalendarDays, Sparkles, Flame, ArrowRight, Hammer }
 import { Checkbox } from '@/components/ui/checkbox'
 import { Skeleton } from '@/components/ui/skeleton'
 import { PulseRing } from '@/components/PulseRing'
+import { FIRE_PAD, StreakCard, StreakFire } from '@/components/StreakFire'
 import { cn } from '@/lib/utils'
 import { useDeadlineStatus } from '@/hooks/useDeadlineStatus'
 import { updateTask, updateSubTask } from '@/lib/tasks'
@@ -519,16 +520,17 @@ export function Dashboard({ firstName, username, justLoggedIn, onWelcomeSeen }) 
               )}
               <span className="text-[11px] font-bold uppercase tracking-[.07em] text-white/60">Due today</span>
             </div>
-            <div className="flex flex-1 flex-col gap-[3px] rounded-xl bg-white/8 p-[14px_18px] outline outline-1 -outline-offset-1 outline-white/16 backdrop-blur-[6px]">
+            <div className={cn('relative flex flex-1 flex-col gap-[3px] overflow-hidden rounded-xl bg-white/8 p-[14px_18px] outline outline-1 -outline-offset-1 outline-white/16 backdrop-blur-[6px]', status !== 'loading' && currentStreak > 0 && FIRE_PAD.tile)}>
+              {status !== 'loading' && <StreakFire streak={currentStreak} size="tile" />}
               {status === 'loading' ? (
                 <Skeleton className="h-[26px] w-9 rounded-md bg-white/20" />
               ) : (
-                <span className="flex items-center gap-1.5 font-display text-[26px] font-bold tracking-[-.02em] text-white tabular-nums">
+                <span className="relative z-[2] flex items-center gap-1.5 font-display text-[26px] font-bold tracking-[-.02em] text-white tabular-nums">
                   {currentStreak}
                   {currentStreak > 0 && <Flame className="size-[18px] fill-orange-400 text-orange-400" />}
                 </span>
               )}
-              <span className="text-[11px] font-bold uppercase tracking-[.07em] text-white/60">Day streak</span>
+              <span className="relative z-[2] text-[11px] font-bold uppercase tracking-[.07em] text-white/60">Day streak</span>
             </div>
           </div>
         </div>
@@ -724,23 +726,7 @@ export function Dashboard({ firstName, username, justLoggedIn, onWelcomeSeen }) 
         <div className="flex flex-col gap-3.5">
           <h2 className="m-0 font-display text-[15px] font-semibold tracking-[.02em] text-foreground">Goals in progress</h2>
           <GoalsComingSoonCard />
-          <div
-            className="relative overflow-hidden rounded-[14px] bg-cover bg-center p-[18px] text-white"
-            style={{ backgroundImage: 'url(/starfield-bg.jpg)' }}
-          >
-            <span aria-hidden="true" className="gradient-ring" style={{ zIndex: 3 }} />
-            <div className="relative z-[2] flex flex-col gap-2">
-              <span className="text-[11px] font-bold uppercase tracking-[.09em] text-white/60">This week</span>
-              <span className="font-display text-[20px] font-semibold tracking-[-.02em]">
-                {currentStreak > 0
-                  ? `You're on a ${currentStreak}-day streak.`
-                  : "Check something off to start a streak."}
-              </span>
-              <span className="text-xs text-white/60">
-                {dueToday > 0 ? `${dueToday} more due today — keep it going.` : 'A clean slate today. One task keeps it alive.'}
-              </span>
-            </div>
-          </div>
+          <StreakCard streak={currentStreak} dueToday={dueToday} />
         </div>
       </div>
     </div>
