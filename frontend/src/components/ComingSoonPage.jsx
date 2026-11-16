@@ -11,7 +11,7 @@ export function ComingSoonPage({ title }) {
       <div className="flex size-14 items-center justify-center rounded-full bg-[#7c5fb0]/10 text-[#7c5fb0]">
         <Hammer className="size-6" />
       </div>
-      <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
+      <h1 className="text-2xl font-semibold">{title}</h1>
       <p className="text-sm text-muted-foreground">
         {title} isn&apos;t built yet — it&apos;s on the way. Check back soon.
       </p>

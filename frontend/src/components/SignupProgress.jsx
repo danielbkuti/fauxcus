@@ -30,7 +30,7 @@ export function SignupProgress({ currentStep }) {
             </div>
             <span
               className={cn(
-                'text-[10px] font-medium whitespace-nowrap',
+                'text-[13px] font-medium whitespace-nowrap',
                 index <= currentIndex ? 'text-black' : 'text-black/40'
               )}
             >

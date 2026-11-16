@@ -200,7 +200,7 @@ export function ProfilePage() {
             <User className="size-6 text-white/85" aria-hidden="true" />
           </div>
           <div className="flex min-w-0 flex-col gap-1.5">
-            <span className="text-[11px] font-bold uppercase tracking-[.12em] text-white/55">Account</span>
+            <span className="text-[14px] font-bold uppercase tracking-[.12em] text-white/55">Account</span>
             {loading ? (
               <>
                 <Skeleton className="h-7 w-40 rounded-md bg-white/20" />
@@ -208,7 +208,7 @@ export function ProfilePage() {
               </>
             ) : (
               <>
-                <h1 className="truncate font-display text-2xl font-bold tracking-[-.02em] text-white">{displayName}</h1>
+                <h1 className="truncate font-display text-2xl font-bold text-white">{displayName}</h1>
                 <p className="truncate text-sm text-white/62">
                   {profile.email} · Joined {formatDeadline(profile.date_joined)}
                 </p>

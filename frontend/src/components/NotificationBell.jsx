@@ -110,7 +110,7 @@ export function NotificationBell({ scrolled }) {
             // corner, so without a higher z-index it painted over the
             // count bubble once scrolled (when the ring's actually
             // there) instead of sitting behind it.
-            className="absolute -top-0.5 -right-0.5 z-10 flex size-4 items-center justify-center rounded-full bg-red-600 text-[9px] font-bold text-white"
+            className="absolute -top-0.5 -right-0.5 z-10 flex size-4 items-center justify-center rounded-full bg-red-600 text-[12px] font-bold text-white"
           >
             {unreadCount > 9 ? '9+' : unreadCount}
           </span>
@@ -149,7 +149,7 @@ export function NotificationBell({ scrolled }) {
                   )}
                 >
                   <span className={cn('font-medium', n.read && 'text-muted-foreground')}>{n.message}</span>
-                  <span className="text-[10px] text-muted-foreground">{formatTime(n.dateCreated)}</span>
+                  <span className="text-[13px] text-muted-foreground">{formatTime(n.dateCreated)}</span>
                 </Link>
               ))}
             </div>

@@ -288,7 +288,7 @@ export function TaskSearch() {
                   )}
                 </span>
                 {(c.kind === 'task' ? c.task.dateDeadline : c.subtask.dateDeadline) && (
-                  <span className="shrink-0 text-[10px] text-muted-foreground">
+                  <span className="shrink-0 text-[13px] text-muted-foreground">
                     {formatDeadline(c.kind === 'task' ? c.task.dateDeadline : c.subtask.dateDeadline)}
                   </span>
                 )}

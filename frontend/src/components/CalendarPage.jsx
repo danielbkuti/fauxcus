@@ -331,12 +331,12 @@ function StatCard({ value, label, flame, streak = 0, loading }) {
       {loading ? (
         <span aria-hidden="true" className="block h-[26px] w-9 animate-pulse rounded-md bg-white/20" />
       ) : (
-        <span className="relative z-[2] flex items-center gap-1.5 font-display text-[26px] font-bold tracking-[-.02em] text-white tabular-nums">
+        <span className="relative z-[2] flex items-center gap-1.5 font-display text-[34px] font-bold text-white tabular-nums">
           {value}
           {flame && <Flame className="size-[18px] fill-orange-400 text-orange-400" aria-hidden="true" />}
         </span>
       )}
-      <span className="relative z-[2] text-[11px] font-bold uppercase tracking-[.07em] text-white/60">{label}</span>
+      <span className="relative z-[2] text-[14px] font-bold uppercase tracking-[.07em] text-white/60">{label}</span>
     </div>
   )
 }
@@ -353,7 +353,7 @@ function ItemPill({ item, nowMs }) {
     >
       <span aria-hidden="true" className="size-1.5 shrink-0 rounded-full" style={{ background: palette.dot }} />
       <span
-        className={cn('truncate text-[11px] font-bold', item.completed && 'line-through opacity-[.62]')}
+        className={cn('truncate text-[14px] font-bold', item.completed && 'line-through opacity-[.62]')}
         style={{ color: palette.fg }}
       >
         {item.name}
@@ -403,7 +403,7 @@ function MonthDayCell({ cell, isToday, isSelected, items, hasAnyItems, nowMs, ca
         <div className="flex items-center justify-between">
           {isToday ? (
             <span
-              className="flex h-6 min-w-6 items-center justify-center rounded-[8px] px-1.5 font-display text-[13px] font-bold text-white"
+              className="flex h-6 min-w-6 items-center justify-center rounded-[8px] px-1.5 font-display text-[17px] font-bold text-white"
               style={{ background: 'linear-gradient(to bottom right,#7c5fb0,#8ec5fc)' }}
             >
               {cell.date.getDate()}
@@ -419,7 +419,7 @@ function MonthDayCell({ cell, isToday, isSelected, items, hasAnyItems, nowMs, ca
             // when it's genuinely out of view, not this.
             <span
               className={cn(
-                'font-display text-[13px] font-semibold tabular-nums',
+                'font-display text-[17px] font-semibold tabular-nums',
                 cell.inMonth ? 'text-[#33224a]' : 'text-[#b3afbd]'
               )}
             >
@@ -437,9 +437,9 @@ function MonthDayCell({ cell, isToday, isSelected, items, hasAnyItems, nowMs, ca
               {visible.map((item) => (
                 <ItemPill key={`${item.kind}-${item.id}`} item={item} nowMs={nowMs} />
               ))}
-              {overflow > 0 && <span className="mt-[5px] text-[11px] font-bold text-[#7c5fb0]">+{overflow} more</span>}
+              {overflow > 0 && <span className="mt-[5px] text-[14px] font-bold text-[#7c5fb0]">+{overflow} more</span>}
               {items.length === 0 && active && canAdd && (
-                <span className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-bold text-[#7c5fb0]">
+                <span className="mt-1.5 inline-flex items-center gap-1 text-[14px] font-bold text-[#7c5fb0]">
                   <Plus className="size-[11px]" aria-hidden="true" />
                   Add task
                 </span>
@@ -464,7 +464,7 @@ function MonthDayCell({ cell, isToday, isSelected, items, hasAnyItems, nowMs, ca
                   <span className={cn('min-w-0 flex-1 truncate text-xs text-[#3f3b46]', item.completed && 'line-through')}>
                     {item.name}
                   </span>
-                  <span className="shrink-0 text-[11px] font-bold tabular-nums text-[#a8a5a0]">{formatTime(item.dateDeadline)}</span>
+                  <span className="shrink-0 text-[14px] font-bold tabular-nums text-[#a8a5a0]">{formatTime(item.dateDeadline)}</span>
                 </div>
               )
             })}
@@ -548,7 +548,7 @@ function MonthGrid({
           return (
             <div key={label} className={cn('flex items-center gap-1', isFirst || isLast ? 'justify-between' : 'justify-center')}>
               {isFirst && <StepButton icon={ChevronLeft} onClick={onPreviousMonth} label="Previous month" />}
-              <span className="text-center text-[11px] font-bold uppercase tracking-[.09em] text-[#a8a5a0]">{label}</span>
+              <span className="text-center text-[14px] font-bold uppercase tracking-[.09em] text-[#a8a5a0]">{label}</span>
               {isLast && <StepButton icon={ChevronRight} onClick={onNextMonth} label="Next month" />}
             </div>
           )
@@ -608,7 +608,7 @@ function MonthGrid({
                   onClick={() => onOpenWeek(week[0].date)}
                   title={`Week ${weekNumber(week[0].date)} — view week`}
                   aria-label={`View week ${weekNumber(week[0].date)}`}
-                  className="flex h-6 w-6 items-center justify-center rounded-[6px] text-[11px] font-bold text-[#8b8794] transition-colors hover:bg-white hover:text-[#7c5fb0] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#7c5fb0]"
+                  className="flex h-6 w-6 items-center justify-center rounded-[6px] text-[14px] font-bold text-[#8b8794] transition-colors hover:bg-white hover:text-[#7c5fb0] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#7c5fb0]"
                 >
                   {weekNumber(week[0].date)}
                 </button>
@@ -684,7 +684,7 @@ function WeekView({ grid, todayKey, selectedKey, itemsByDay, nowMs, filterState,
             onClick={() => onSelectDay(cell.key)}
             onDoubleClick={() => onOpenDay(cell.date)}
             className={cn(
-              'border-l border-[#ece9f2] p-[11px_10px] text-left text-[11px] font-bold tracking-[.04em] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#7c5fb0]',
+              'border-l border-[#ece9f2] p-[11px_10px] text-left text-[14px] font-bold tracking-[.04em] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#7c5fb0]',
               cell.key === todayKey ? 'text-[#7c5fb0]' : 'text-[#8b8794]',
               cell.key === selectedKey && 'bg-[rgba(124,95,176,.07)]'
             )}
@@ -697,7 +697,7 @@ function WeekView({ grid, todayKey, selectedKey, itemsByDay, nowMs, filterState,
         {HOURS.map((hour) => (
           <div key={hour} className="grid border-b border-[#f2eff6] last:border-b-0" style={{ gridTemplateColumns: WEEK_HOUR_COLS }}>
             <div
-              className="flex items-start justify-end p-[6px_10px_0_0] text-right text-[10px] font-bold uppercase tracking-[.05em] text-[#a8a5a0]"
+              className="flex items-start justify-end p-[6px_10px_0_0] text-right text-[13px] font-bold uppercase tracking-[.05em] text-[#a8a5a0]"
               style={{ minHeight: HOUR_ROW_HEIGHT }}
             >
               {hourLabel(hour)}
@@ -738,13 +738,13 @@ function DayItemRow({ item, nowMs }) {
     >
       <span aria-hidden="true" className="size-1.5 shrink-0 rounded-full" style={{ background: palette.dot }} />
       <span
-        className={cn('truncate text-[11px] font-bold', item.completed && 'line-through opacity-[.62]')}
+        className={cn('truncate text-[14px] font-bold', item.completed && 'line-through opacity-[.62]')}
         style={{ color: palette.fg }}
       >
         {item.name}
       </span>
       <span
-        className="shrink-0 rounded-[5px] px-1.5 py-0.5 text-[10px] font-black uppercase tracking-[.06em]"
+        className="shrink-0 rounded-[5px] px-1.5 py-0.5 text-[13px] font-black uppercase tracking-[.06em]"
         style={{ background: palette.bg, color: palette.fg }}
       >
         {item.kind}
@@ -776,7 +776,7 @@ function DayView({ date, items, nowMs, loading, slideDirection }) {
       style={{ boxShadow: CARD_SHADOW }}
     >
       <div className="flex items-baseline justify-between border-b border-[#ece9f2] p-[20px_22px]">
-        <h2 className="m-0 font-display text-xl font-semibold tracking-[-.02em] text-[#33224a]">
+        <h2 className="m-0 font-display text-xl font-semibold text-[#33224a]">
           {date.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
         </h2>
         <span className="text-xs font-bold text-[#a8a5a0]">
@@ -792,7 +792,7 @@ function DayView({ date, items, nowMs, loading, slideDirection }) {
               className="grid border-b border-[#f2eff6] last:border-b-0"
               style={{ gridTemplateColumns: '90px 1fr', minHeight: DAY_HOUR_ROW_HEIGHT }}
             >
-              <div className="p-[10px_22px_0_0] text-right text-[11px] font-bold uppercase tracking-[.06em] text-[#a8a5a0]">
+              <div className="p-[10px_22px_0_0] text-right text-[14px] font-bold uppercase tracking-[.06em] text-[#a8a5a0]">
                 {hourLabel(hour)}
               </div>
               <div className="flex flex-col justify-center gap-[7px] p-[8px_22px]">
@@ -890,12 +890,12 @@ function SelectedDayRow({ item, nowMs, onToggle, onDeleteEvent }) {
       )}
       <div className="min-w-0 flex-1">
         <p
-          className={cn('truncate text-[11px] font-bold', item.completed && 'line-through opacity-[.62]')}
+          className={cn('truncate text-[14px] font-bold', item.completed && 'line-through opacity-[.62]')}
           style={{ color: palette.fg }}
         >
           {item.name}
         </p>
-        <p className="mt-0.5 truncate text-[11px] font-bold text-[#a8a5a0]">
+        <p className="mt-0.5 truncate text-[14px] font-bold text-[#a8a5a0]">
           {isEvent ? (
             <>
               Event · {formatEventTime(item)}
@@ -926,10 +926,10 @@ function SelectedDayRow({ item, nowMs, onToggle, onDeleteEvent }) {
 function SelectedDayCard({ date, isToday, items, nowMs, loading, onToggle, onDeleteEvent, canAdd, onAddClick }) {
   return (
     <div className="rounded-2xl bg-white p-[18px]" style={{ boxShadow: CARD_SHADOW }}>
-      <p className="text-[11px] font-bold uppercase tracking-[.09em] text-[#a8a5a0]">
+      <p className="text-[14px] font-bold uppercase tracking-[.09em] text-[#a8a5a0]">
         {isToday ? 'Today · selected day' : 'Selected day'}
       </p>
-      <h3 className="mt-1 font-display text-xl font-semibold tracking-[-.02em] text-[#33224a]">
+      <h3 className="mt-1 font-display text-xl font-semibold text-[#33224a]">
         {date.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'short' })}
       </h3>
 
@@ -953,7 +953,7 @@ function SelectedDayCard({ date, isToday, items, nowMs, loading, onToggle, onDel
         onClick={onAddClick}
         disabled={!canAdd}
         title={canAdd ? undefined : "Can't add something dated in the past"}
-        className="mt-3.5 flex w-full items-center gap-2 rounded-[11px] px-3.5 py-2.5 text-[13px] font-bold text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-45"
+        className="mt-3.5 flex w-full items-center gap-2 rounded-[11px] px-3.5 py-2.5 text-[17px] font-bold text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-45"
         style={{
           background: 'linear-gradient(180deg,#4c3670 0%,#33224a 62%,#2b1c40 100%)',
           boxShadow: 'inset 0 1px 0 rgba(255,255,255,.42), inset 0 -1px 0 rgba(0,0,0,.18), 0 8px 16px -10px rgba(51,34,74,.7)',
@@ -973,7 +973,7 @@ function SelectedDayCard({ date, isToday, items, nowMs, loading, onToggle, onDel
 function GoalsRailCard() {
   return (
     <div className="rounded-2xl bg-white p-[18px]" style={{ boxShadow: CARD_SHADOW }}>
-      <p className="text-[11px] font-bold uppercase tracking-[.09em] text-[#a8a5a0]">Goals landing this month</p>
+      <p className="text-[14px] font-bold uppercase tracking-[.09em] text-[#a8a5a0]">Goals landing this month</p>
       <Link
         to="/goals"
         className="group mt-3.5 flex flex-col items-center gap-2.5 rounded-xl bg-[#f5f8fd] px-4 py-6 text-center shadow-[inset_0_0_0_1px_#dbe6f5] transition-colors hover:bg-[#eef4fc]"
@@ -1254,8 +1254,8 @@ export function CalendarPage() {
           <div className="relative z-[2] flex flex-col gap-[26px]">
             <div className="flex flex-wrap items-start justify-between gap-5">
               <div className="flex flex-col gap-2">
-                <span className="text-[11px] font-bold uppercase tracking-[.12em] text-white/55">{heroToday}</span>
-                <h1 className="m-0 font-display text-[44px] font-bold leading-[1.05] tracking-[-.03em] text-white">
+                <span className="text-[14px] font-bold uppercase tracking-[.12em] text-white/55">{heroToday}</span>
+                <h1 className="m-0 font-display text-[57px] font-bold leading-[1.05] text-white">
                   {viewLabel(viewType, anchorDate, range)}
                 </h1>
                 {loading ? (
@@ -1283,7 +1283,7 @@ export function CalendarPage() {
                 <button
                   type="button"
                   onClick={() => setAnchorDate(startOfDay(now))}
-                  className="flex h-[34px] items-center rounded-[10px] bg-white/10 px-4 text-[13px] font-bold text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,.18)] transition-colors hover:bg-white/22 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+                  className="flex h-[34px] items-center rounded-[10px] bg-white/10 px-4 text-[17px] font-bold text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,.18)] transition-colors hover:bg-white/22 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
                 >
                   Today
                 </button>
@@ -1319,7 +1319,7 @@ export function CalendarPage() {
                 aria-selected={viewType === v.key}
                 onClick={() => setViewType(v.key)}
                 className={cn(
-                  'rounded-[9px] px-[18px] py-[7px] text-[13px] font-bold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#7c5fb0]',
+                  'rounded-[9px] px-[18px] py-[7px] text-[17px] font-bold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#7c5fb0]',
                   viewType === v.key
                     ? 'bg-white text-[#33224a] shadow-[0_2px_6px_-2px_rgba(51,34,74,.3),0_0_0_1px_rgba(51,34,74,.07)]'
                     : 'text-[#8b8794] hover:text-[#33224a]'
@@ -1331,7 +1331,7 @@ export function CalendarPage() {
           </div>
 
           <div className="flex flex-wrap items-center gap-[7px]">
-            <span className="mr-1 text-[11px] font-bold uppercase tracking-[.09em] text-[#a8a5a0]">Filter</span>
+            <span className="mr-1 text-[14px] font-bold uppercase tracking-[.09em] text-[#a8a5a0]">Filter</span>
             {FILTER_CHIPS.map((chip) => {
               const active = filter === chip.key
               const palette = chip.state ? STATE_PALETTE[chip.state] : ALL_CHIP_COLORS

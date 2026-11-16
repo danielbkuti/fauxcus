@@ -7,7 +7,7 @@ import { TaskSearch } from '@/components/TaskSearch'
 export function TasksPage() {
   return (
     <div className="mx-auto max-w-5xl px-8 py-8">
-      <h1 className="mb-4 text-2xl font-semibold tracking-tight">Tasks</h1>
+      <h1 className="mb-4 text-2xl font-semibold">Tasks</h1>
       <div className="mb-4">
         <TaskSearch />
       </div>

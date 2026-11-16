@@ -692,12 +692,12 @@ export function TaskDetailPage() {
                 style={bannerGlyphDurationMs ? { animationDuration: `${bannerGlyphDurationMs}ms` } : undefined}
               />
             )}
-            <p className="flex-1 text-[12.5px] font-black tracking-[.01em] tabular-nums">{bannerCopy}</p>
+            <p className="flex-1 text-[16px] font-black tracking-[.01em] tabular-nums">{bannerCopy}</p>
             {bannerAction && (
               <button
                 type="button"
                 onClick={bannerAction.onClick}
-                className="rounded-full border px-[13px] py-1 text-[11.5px] font-bold text-white transition-colors hover:bg-white"
+                className="rounded-full border px-[13px] py-1 text-[15px] font-bold text-white transition-colors hover:bg-white"
                 style={{ borderColor: 'rgba(255,255,255,.55)', background: 'rgba(255,255,255,.14)' }}
                 onMouseEnter={(e) => (e.currentTarget.style.color = theme.strong)}
                 onMouseLeave={(e) => (e.currentTarget.style.color = '')}
@@ -731,7 +731,7 @@ export function TaskDetailPage() {
             <div className="flex flex-col items-center gap-1.5">
               <PrimaryActionButton task={task} theme={theme} onClick={handleToggleTaskComplete} />
               {!task.completed && hasSubtasks && (
-                <p className="text-center text-[10.5px]" style={{ color: theme.strong }}>
+                <p className="text-center text-[14px]" style={{ color: theme.strong }}>
                   {openCount > 0
                     ? `Completing from here closes ${pluralize(openCount, 'open subtask')}.`
                     : 'Every subtask is already done.'}
@@ -742,15 +742,15 @@ export function TaskDetailPage() {
             <div ref={deadlineSectionRef} className="flex flex-col gap-2.5">
               {task.completed ? (
                 <div>
-                  <p className="text-[10px] font-black tracking-[.12em] uppercase" style={{ color: theme.strong }}>
+                  <p className="text-[13px] font-black tracking-[.12em] uppercase" style={{ color: theme.strong }}>
                     Deadline
                   </p>
                   <div className="mt-1 rounded-xl border bg-white px-3 py-2" style={{ borderColor: theme.hairline }}>
-                    <p className="text-[13px] font-black" style={{ color: theme.title }}>
+                    <p className="text-[17px] font-black" style={{ color: theme.title }}>
                       {task.dateDeadline ? formatDeadline(task.dateDeadline) : 'None set'}
                     </p>
                     {task.dateDeadline && (
-                      <p className="mt-0.5 text-[10.5px] font-bold capitalize" style={{ color: theme.strong }}>
+                      <p className="mt-0.5 text-[14px] font-bold capitalize" style={{ color: theme.strong }}>
                         {deadlineOutcomeClause(task) ?? 'Deadline passed'}
                       </p>
                     )}
@@ -758,7 +758,7 @@ export function TaskDetailPage() {
                 </div>
               ) : (
                 <div ref={deadlineAnchorRef} className="relative">
-                  <p className="text-[10px] font-black tracking-[.12em] uppercase" style={{ color: theme.strong }}>
+                  <p className="text-[13px] font-black tracking-[.12em] uppercase" style={{ color: theme.strong }}>
                     Deadline
                   </p>
                   {editingDeadline && (
@@ -778,11 +778,11 @@ export function TaskDetailPage() {
                       style={{ borderColor: theme.hairline }}
                     >
                       <span>
-                        <span className="block text-[13px] font-black" style={{ color: theme.title }}>
+                        <span className="block text-[17px] font-black" style={{ color: theme.title }}>
                           {task.dateDeadline ? formatDeadline(task.dateDeadline) : 'Set deadline'}
                         </span>
                         {task.dateDeadline && (
-                          <span className="mt-0.5 block text-[10.5px] font-bold tabular-nums" style={{ color: theme.strong }}>
+                          <span className="mt-0.5 block text-[14px] font-bold tabular-nums" style={{ color: theme.strong }}>
                             {deadlineStatus.isOverdue
                               ? `${deadlineStatus.overdueDisplay} overdue`
                               : deadlineStatus.isUrgent
@@ -798,17 +798,17 @@ export function TaskDetailPage() {
               )}
 
               <div>
-                <p className="text-[10px] font-black tracking-[.12em] uppercase" style={{ color: 'oklch(0.556 0 0)' }}>
+                <p className="text-[13px] font-black tracking-[.12em] uppercase" style={{ color: 'oklch(0.556 0 0)' }}>
                   Created
                 </p>
-                <p className="mt-1 text-[12.5px] font-bold" style={{ color: 'oklch(0.35 0 0)' }}>
+                <p className="mt-1 text-[16px] font-bold" style={{ color: 'oklch(0.35 0 0)' }}>
                   {formatDeadline(task.dateCreated)}
                 </p>
               </div>
 
               {windowFraction !== null && (
                 <div>
-                  <p className="text-[10px] font-black tracking-[.12em] uppercase" style={{ color: theme.strong }}>
+                  <p className="text-[13px] font-black tracking-[.12em] uppercase" style={{ color: theme.strong }}>
                     Time window
                   </p>
                   <div className="mt-1.5 h-[5px] w-full overflow-hidden rounded-full" style={{ background: theme.soft }}>
@@ -817,7 +817,7 @@ export function TaskDetailPage() {
                       style={{ transform: `scaleX(${windowFraction})`, background: theme.windowFill }}
                     />
                   </div>
-                  <p className="mt-1 text-[10.5px] font-bold" style={{ color: theme.strong }}>
+                  <p className="mt-1 text-[14px] font-bold" style={{ color: theme.strong }}>
                     {Math.round(windowFraction * 100)}% of the window used
                   </p>
                 </div>
@@ -827,13 +827,13 @@ export function TaskDetailPage() {
             <div className="mt-auto pt-2">
               {confirmingDelete ? (
                 <div className="rounded-xl border border-red-200 bg-red-50 p-2.5">
-                  <p className="text-[11px] text-red-800">Are you sure you want to delete this task?</p>
+                  <p className="text-[14px] text-red-800">Are you sure you want to delete this task?</p>
                   <div className="mt-2 flex justify-end gap-3">
                     <button
                       type="button"
                       onClick={() => setConfirmingDelete(false)}
                       disabled={deleting}
-                      className="text-[11px] text-muted-foreground hover:underline"
+                      className="text-[14px] text-muted-foreground hover:underline"
                     >
                       Cancel
                     </button>
@@ -841,12 +841,12 @@ export function TaskDetailPage() {
                       type="button"
                       onClick={handleDeleteConfirm}
                       disabled={deleting}
-                      className="text-[11px] font-bold text-red-700 hover:underline"
+                      className="text-[14px] font-bold text-red-700 hover:underline"
                     >
                       {deleting ? 'Deleting…' : 'Delete'}
                     </button>
                   </div>
-                  {deleteError && <p className="mt-1 text-[11px] text-red-700">{deleteError}</p>}
+                  {deleteError && <p className="mt-1 text-[14px] text-red-700">{deleteError}</p>}
                 </div>
               ) : (
                 <button
@@ -874,7 +874,7 @@ export function TaskDetailPage() {
               <SectionHeader label="Subtasks" hairline={theme.hairline} strong={theme.strong}>
                 {hasSubtasks && (
                   <span
-                    className="rounded-full px-2 py-0.5 text-[11px] font-black"
+                    className="rounded-full px-2 py-0.5 text-[14px] font-black"
                     style={{ background: theme.soft, color: theme.strong }}
                   >
                     {openCount > 0
@@ -885,7 +885,7 @@ export function TaskDetailPage() {
                 <button
                   type="button"
                   onClick={openAddSubtask}
-                  className="rounded-full px-3 py-1 text-[11.5px] font-bold text-white"
+                  className="rounded-full px-3 py-1 text-[15px] font-bold text-white"
                   style={{ background: theme.title }}
                 >
                   + Add subtask
@@ -1019,7 +1019,7 @@ function PrimaryActionButton({ task, theme, onClick }) {
       disabled={pending}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
-      className="group relative w-full overflow-hidden rounded-full border-none px-[18px] py-[11px] text-[13.5px] font-black text-white disabled:opacity-70"
+      className="group relative w-full overflow-hidden rounded-full border-none px-[18px] py-[11px] text-[18px] font-black text-white disabled:opacity-70"
       style={{ background: theme.cta, boxShadow: theme.ctaShadow }}
     >
       <span
@@ -1071,10 +1071,10 @@ function ProgressDial({ pct, k, n, theme }) {
         />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-[32px] leading-none font-black tracking-[-0.03em]" style={{ color: theme.title }}>
+        <span className="text-[42px] leading-none font-black" style={{ color: theme.title }}>
           {pct}%
         </span>
-        <span className="mt-1.5 text-[11px] font-bold" style={{ color: theme.strong }}>
+        <span className="mt-1.5 text-[14px] font-bold" style={{ color: theme.strong }}>
           {k} of {n} done
         </span>
       </div>
@@ -1119,7 +1119,7 @@ function TitleEditor({ value, onSave, completed, titleColor }) {
             autoFocus
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
-            className="w-full rounded-lg border border-input bg-white px-2.5 py-1 text-[27px] leading-[1.18] font-black tracking-[-0.025em] outline-none focus-visible:border-ring"
+            className="w-full rounded-lg border border-input bg-white px-2.5 py-1 text-[35px] leading-[1.18] font-black outline-none focus-visible:border-ring"
             style={{ color: titleColor }}
           />
           <button type="submit" disabled={saving} className="text-xs font-bold text-emerald-700 hover:underline">
@@ -1150,7 +1150,7 @@ function TitleEditor({ value, onSave, completed, titleColor }) {
       className="-ml-2 inline-flex min-w-0 items-center gap-1.5 rounded-[10px] px-2 py-0.5 text-left transition-colors hover:bg-white/75"
     >
       <span
-        className="truncate text-[27px] leading-[1.18] font-black tracking-[-0.025em]"
+        className="truncate text-[35px] leading-[1.18] font-black"
         style={{
           color: titleColor,
           textWrap: 'pretty',
@@ -1168,7 +1168,7 @@ function TitleEditor({ value, onSave, completed, titleColor }) {
 function SectionHeader({ label, hairline, strong, children }) {
   return (
     <div className="flex items-center gap-2.5">
-      <h2 className="text-[11px] font-black tracking-[.12em] uppercase" style={{ color: strong }}>
+      <h2 className="text-[14px] font-black tracking-[.12em] uppercase" style={{ color: strong }}>
         {label}
       </h2>
       <span
@@ -1225,7 +1225,7 @@ function DescriptionPanel({ description, onSave, border, strong }) {
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
               rows={5}
-              className="w-full max-w-[62ch] resize-y bg-transparent text-[14.5px] leading-[1.72] outline-none"
+              className="w-full max-w-[62ch] resize-y bg-transparent text-[19px] leading-[1.72] outline-none"
               style={{ color: 'oklch(0.28 0 0)' }}
               placeholder="Add some context so this task still makes sense next week."
             />
@@ -1258,7 +1258,7 @@ function DescriptionPanel({ description, onSave, border, strong }) {
               <Pencil className="size-[15px]" aria-hidden="true" />
             </button>
             <p
-              className="max-w-[62ch] text-[14.5px] leading-[1.72] whitespace-pre-wrap"
+              className="max-w-[62ch] text-[19px] leading-[1.72] whitespace-pre-wrap"
               style={{ color: 'oklch(0.28 0 0)', textWrap: 'pretty' }}
             >
               {description}
@@ -1379,30 +1379,30 @@ function DetailSubtaskRow({ index, subtask, checked, confetti, busy, theme, onTo
   let badgeContent, badgeClassName, badgeStyle
   if (checked) {
     badgeContent = subtask.dateCompleted ? `Done ${formatShortDate(subtask.dateCompleted)}` : 'Done'
-    badgeClassName = 'rounded-full bg-[#d1fae5] px-2 py-0.5 text-[11px] font-black text-[#047857] tabular-nums'
+    badgeClassName = 'rounded-full bg-[#d1fae5] px-2 py-0.5 text-[14px] font-black text-[#047857] tabular-nums'
   } else if (subtask.dateDeadline && status.isOverdue) {
     // Fixed red, not the page's own theme — same reasoning as
     // rowPalette above — plus a pulse, so an overdue subtask can't get
     // lost in the row the way a plain badge would.
     badgeContent = status.overdueDisplay ? `${status.overdueDisplay} overdue` : 'Overdue'
     badgeClassName =
-      'animate-badge-pulse-red rounded-full px-2 py-0.5 text-[11px] font-black tabular-nums transition-[filter] hover:brightness-95'
+      'animate-badge-pulse-red rounded-full px-2 py-0.5 text-[14px] font-black tabular-nums transition-[filter] hover:brightness-95'
     badgeStyle = { background: STATE_THEME.overdue.soft, color: STATE_THEME.overdue.strong }
   } else if (subtask.dateDeadline && status.isUrgent) {
     badgeContent = `Due in ${status.countdownDisplay}`
     badgeClassName =
-      'animate-badge-pulse-ember rounded-full px-2 py-0.5 text-[11px] font-black tabular-nums transition-[filter] hover:brightness-95'
+      'animate-badge-pulse-ember rounded-full px-2 py-0.5 text-[14px] font-black tabular-nums transition-[filter] hover:brightness-95'
     badgeStyle = { background: STATE_THEME['due-soon'].soft, color: STATE_THEME['due-soon'].strong }
   } else if (subtask.dateDeadline) {
     badgeContent = `Due ${formatDeadline(subtask.dateDeadline)}`
-    badgeClassName = 'rounded-full bg-[#f3e8ff] px-2 py-0.5 text-[11px] font-black text-[#6b46a8] tabular-nums transition-colors hover:bg-[#e9d5ff]'
+    badgeClassName = 'rounded-full bg-[#f3e8ff] px-2 py-0.5 text-[14px] font-black text-[#6b46a8] tabular-nums transition-colors hover:bg-[#e9d5ff]'
   } else {
     // No deadline yet — soft purple, same pair as every other "set a
     // deadline" trigger in the app now uses (AddSubtaskForm's own
     // included, and the list view's own equivalent on TaskCard) —
     // used to be amber here, same as those, before this pass.
     badgeContent = 'Set deadline'
-    badgeClassName = 'rounded-full bg-[#f3e8ff] px-2 py-0.5 text-[11px] font-black text-[#6b46a8] transition-colors hover:bg-[#e9d5ff]'
+    badgeClassName = 'rounded-full bg-[#f3e8ff] px-2 py-0.5 text-[14px] font-black text-[#6b46a8] transition-colors hover:bg-[#e9d5ff]'
   }
 
   const badge = checked ? (
@@ -1443,7 +1443,7 @@ function DetailSubtaskRow({ index, subtask, checked, confetti, busy, theme, onTo
         {checked && <Check className="size-[11px] text-white" strokeWidth={3} aria-hidden="true" />}
       </button>
 
-      <span className="w-[22px] shrink-0 text-[11px] font-black tabular-nums" style={{ color: indexColor }}>
+      <span className="w-[22px] shrink-0 text-[14px] font-black tabular-nums" style={{ color: indexColor }}>
         {index}
       </span>
 
@@ -1487,13 +1487,13 @@ function DetailSubtaskRow({ index, subtask, checked, confetti, busy, theme, onTo
       <div className="relative shrink-0" ref={deleteRef}>
         {confirmingDelete ? (
           <div className="absolute top-full right-0 z-20 mt-1 w-44 rounded-lg border bg-card p-2.5 text-left shadow-lg">
-            <p className="text-[11px] text-muted-foreground">Are you sure you want to delete this subtask?</p>
+            <p className="text-[14px] text-muted-foreground">Are you sure you want to delete this subtask?</p>
             <div className="mt-2 flex justify-end gap-2">
               <button
                 type="button"
                 onClick={() => setConfirmingDelete(false)}
                 disabled={deleting}
-                className="text-[11px] text-muted-foreground hover:underline"
+                className="text-[14px] text-muted-foreground hover:underline"
               >
                 Cancel
               </button>
@@ -1501,7 +1501,7 @@ function DetailSubtaskRow({ index, subtask, checked, confetti, busy, theme, onTo
                 type="button"
                 onClick={handleDeleteConfirm}
                 disabled={deleting}
-                className="text-[11px] font-bold text-destructive hover:underline"
+                className="text-[14px] font-bold text-destructive hover:underline"
               >
                 {deleting ? 'Deleting…' : 'Delete'}
               </button>
@@ -1757,7 +1757,7 @@ function ActivityLog({ entries, theme }) {
   return (
     <div className="mt-6">
       <div className="flex items-center gap-2.5">
-        <h2 className="text-[11px] font-black tracking-[.12em] uppercase" style={{ color: theme.strong }}>
+        <h2 className="text-[14px] font-black tracking-[.12em] uppercase" style={{ color: theme.strong }}>
           Activity
         </h2>
         <span className="h-px flex-1" style={{ background: `linear-gradient(90deg,${theme.hairline},rgba(255,255,255,0))` }} />

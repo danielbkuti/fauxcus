@@ -131,11 +131,11 @@ function QuickStartCard({
       </div>
 
       <div className="flex items-end justify-between gap-3">
-        <h3 className="max-w-[150px] font-display text-[21px] font-semibold leading-[1.15] tracking-[-.025em]">
+        <h3 className="max-w-[150px] font-display text-[27px] font-semibold leading-[1.15]">
           {title}
         </h3>
         <span
-          className="flex shrink-0 items-center rounded-[9px] px-[14px] py-[9px] text-[13px] font-bold backdrop-blur-[6px] transition-[gap] duration-[180ms]"
+          className="flex shrink-0 items-center rounded-[9px] px-[14px] py-[9px] text-[17px] font-bold backdrop-blur-[6px] transition-[gap] duration-[180ms]"
           style={{ background: buttonGradient, color: buttonTextColor, boxShadow: buttonShadow, gap: hovered ? '11px' : '7px' }}
         >
           {buttonLabel}
@@ -285,7 +285,7 @@ function UpcomingRow({ item, celebrating, onToggle }) {
         {(isOverdue || isUrgent) && <PulseRing />}
         <span
           className={cn(
-            'relative rounded-full px-2 py-0.5 text-[11px] font-medium whitespace-nowrap tabular-nums transition-colors',
+            'relative rounded-full px-2 py-0.5 text-[14px] font-medium whitespace-nowrap tabular-nums transition-colors',
             isOverdue
               ? 'bg-red-700 text-white'
               : isUrgent
@@ -476,8 +476,8 @@ export function Dashboard({ firstName, username, justLoggedIn, onWelcomeSeen }) 
         <div className="relative z-[2] flex flex-col gap-[26px]">
           <div className="flex items-start justify-between gap-5">
             <div className="flex flex-col gap-2">
-              <span className="text-[11px] font-bold uppercase tracking-[.12em] text-white/55">{formatNow(now)}</span>
-              <h1 className="m-0 font-display text-[44px] font-bold leading-[1.05] tracking-[-.03em] text-white">
+              <span className="text-[14px] font-bold uppercase tracking-[.12em] text-white/55">{formatNow(now)}</span>
+              <h1 className="m-0 font-display text-[57px] font-bold leading-[1.05] text-white">
                 Welcome back,{' '}
                 {animateWelcome ? (
                   // Overlay technique (base copy underneath for a11y + layout,
@@ -509,29 +509,29 @@ export function Dashboard({ firstName, username, justLoggedIn, onWelcomeSeen }) 
               {status === 'loading' ? (
                 <Skeleton className="h-[26px] w-9 rounded-md bg-white/20" />
               ) : (
-                <span className="font-display text-[26px] font-bold tracking-[-.02em] text-white tabular-nums">{doneToday}</span>
+                <span className="font-display text-[34px] font-bold text-white tabular-nums">{doneToday}</span>
               )}
-              <span className="text-[11px] font-bold uppercase tracking-[.07em] text-white/60">Done today</span>
+              <span className="text-[14px] font-bold uppercase tracking-[.07em] text-white/60">Done today</span>
             </div>
             <div className="flex flex-1 flex-col gap-[3px] rounded-xl bg-white/8 p-[14px_18px] outline outline-1 -outline-offset-1 outline-white/16 backdrop-blur-[6px]">
               {status === 'loading' ? (
                 <Skeleton className="h-[26px] w-9 rounded-md bg-white/20" />
               ) : (
-                <span className="font-display text-[26px] font-bold tracking-[-.02em] text-white tabular-nums">{dueToday}</span>
+                <span className="font-display text-[34px] font-bold text-white tabular-nums">{dueToday}</span>
               )}
-              <span className="text-[11px] font-bold uppercase tracking-[.07em] text-white/60">Due today</span>
+              <span className="text-[14px] font-bold uppercase tracking-[.07em] text-white/60">Due today</span>
             </div>
             <div className={cn('relative flex flex-1 flex-col gap-[3px] overflow-hidden rounded-xl bg-white/8 p-[14px_18px] outline outline-1 -outline-offset-1 outline-white/16 backdrop-blur-[6px]', status !== 'loading' && currentStreak > 0 && FIRE_PAD.tile)}>
               {status !== 'loading' && <StreakFire streak={currentStreak} size="tile" />}
               {status === 'loading' ? (
                 <Skeleton className="h-[26px] w-9 rounded-md bg-white/20" />
               ) : (
-                <span className="relative z-[2] flex items-center gap-1.5 font-display text-[26px] font-bold tracking-[-.02em] text-white tabular-nums">
+                <span className="relative z-[2] flex items-center gap-1.5 font-display text-[34px] font-bold text-white tabular-nums">
                   {currentStreak}
                   {currentStreak > 0 && <Flame className="size-[18px] fill-orange-400 text-orange-400" />}
                 </span>
               )}
-              <span className="relative z-[2] text-[11px] font-bold uppercase tracking-[.07em] text-white/60">Day streak</span>
+              <span className="relative z-[2] text-[14px] font-bold uppercase tracking-[.07em] text-white/60">Day streak</span>
             </div>
           </div>
         </div>
@@ -539,7 +539,7 @@ export function Dashboard({ firstName, username, justLoggedIn, onWelcomeSeen }) 
 
       {/* Quick start */}
       <div className="mt-9 mb-4 flex items-baseline justify-between">
-        <h2 className="m-0 font-display text-[15px] font-semibold tracking-[.02em] text-foreground">Quick start</h2>
+        <h2 className="m-0 font-display text-[20px] font-semibold tracking-[.02em] text-foreground">Quick start</h2>
         <span className="text-xs text-[#a8a5a0]">Three ways in</span>
       </div>
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
@@ -593,7 +593,7 @@ export function Dashboard({ firstName, username, justLoggedIn, onWelcomeSeen }) 
               <>
                 <div className="flex items-baseline justify-between">
                   <span className="text-xs font-bold text-white">Ship v2</span>
-                  <span className="font-display text-[15px] font-semibold text-white tabular-nums">82%</span>
+                  <span className="font-display text-[20px] font-semibold text-white tabular-nums">82%</span>
                 </div>
                 <div key={hovered} className="h-2 overflow-hidden rounded-full bg-white/25">
                   <span
@@ -605,7 +605,7 @@ export function Dashboard({ firstName, username, justLoggedIn, onWelcomeSeen }) 
                     }}
                   />
                 </div>
-                <span className="text-[11px] font-bold text-white/82">9 of 11 tasks · ends Sep 30</span>
+                <span className="text-[14px] font-bold text-white/82">9 of 11 tasks · ends Sep 30</span>
               </>
             )
           }}
@@ -631,7 +631,7 @@ export function Dashboard({ firstName, username, justLoggedIn, onWelcomeSeen }) 
               <>
                 <div className="grid grid-cols-7 gap-[5px]">
                   {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((d, i) => (
-                    <span key={i} className="text-center text-[9px] font-bold text-[#12314b]/75">
+                    <span key={i} className="text-center text-[12px] font-bold text-[#12314b]/75">
                       {d}
                     </span>
                   ))}
@@ -639,7 +639,7 @@ export function Dashboard({ firstName, username, justLoggedIn, onWelcomeSeen }) 
                     cell.isToday ? (
                       <span
                         key={`${hovered}-${i}`}
-                        className="flex h-[22px] items-center justify-center rounded-[5px] text-[11px] font-bold"
+                        className="flex h-[22px] items-center justify-center rounded-[5px] text-[14px] font-bold"
                         style={{
                           background: '#12314b',
                           color: '#8ec5fc',
@@ -652,14 +652,14 @@ export function Dashboard({ firstName, username, justLoggedIn, onWelcomeSeen }) 
                     ) : (
                       <span
                         key={i}
-                        className="flex h-[22px] items-center justify-center rounded-[5px] bg-[#12314b]/10 text-[11px] font-bold text-[#12314b]"
+                        className="flex h-[22px] items-center justify-center rounded-[5px] bg-[#12314b]/10 text-[14px] font-bold text-[#12314b]"
                       >
                         {cell.date}
                       </span>
                     )
                   )}
                 </div>
-                <span className="text-[11px] font-bold text-[#12314b]/75">Full calendar view →</span>
+                <span className="text-[14px] font-bold text-[#12314b]/75">Full calendar view →</span>
               </>
             )
           }}
@@ -670,7 +670,7 @@ export function Dashboard({ firstName, username, justLoggedIn, onWelcomeSeen }) 
       <div className="mt-9 grid grid-cols-1 items-start gap-6 lg:grid-cols-[1fr_336px]">
         <div>
           <div className="mb-3.5 flex items-center justify-between">
-            <h2 className="m-0 font-display text-[15px] font-semibold tracking-[.02em] text-foreground">Upcoming</h2>
+            <h2 className="m-0 font-display text-[20px] font-semibold tracking-[.02em] text-foreground">Upcoming</h2>
             <Link to="/tasks" className="text-xs font-medium text-sky-600 hover:underline">
               View all tasks →
             </Link>
@@ -725,7 +725,7 @@ export function Dashboard({ firstName, username, justLoggedIn, onWelcomeSeen }) 
         </div>
 
         <div className="flex flex-col gap-3.5">
-          <h2 className="m-0 font-display text-[15px] font-semibold tracking-[.02em] text-foreground">Goals in progress</h2>
+          <h2 className="m-0 font-display text-[20px] font-semibold tracking-[.02em] text-foreground">Goals in progress</h2>
           <GoalsComingSoonCard />
           <StreakCard streak={currentStreak} dueToday={dueToday} />
         </div>
