@@ -31,7 +31,7 @@ This project demonstrates:
 
 **[fauxcus-api.onrender.com](https://fauxcus-api.onrender.com)**
 
-Log in with `demo@example.com` / `DemoPass123!` to see a seeded account with real tasks and subtasks in every deadline state. It's hosted on Render's free tier, so the first request after a period of inactivity can take about a minute to spin the container back up — later requests are fast.
+Log in with `demo@example.com` / `DemoPass123!` to see a seeded account: tasks and subtasks with deadlines on the Calendar, and a completion history behind the Progress page. It's hosted on Render's free tier, so the first request after a period of inactivity can take about a minute to spin the container back up — later requests are fast.
 
 ---
 
@@ -159,6 +159,13 @@ The same page in two of its four deadline-driven states — in progress (purple,
 
 ### Progress
 ![Progress](docs/screenshot-progress.png)
+
+### Calendar
+
+Month view over tasks, subtasks, and calendar items, with deadline-state colouring (the urgent task is ember, the rest calm purple), a filter rail, and a selected-day panel. Week and Day views switch to a 24-hour hourly grid — a close-up of Week below.
+
+![Calendar — month](docs/screenshot-calendar.png)
+![Calendar — week, hourly grid](docs/screenshot-calendar-week.png)
 
 ---
 
