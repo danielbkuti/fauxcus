@@ -93,6 +93,9 @@ The deadline-digest scheduler is also handled differently in production than in 
 - Progress page: a full-bleed stats band (completion rate, streaks, a 7-day sparkline, a 30/90/all-time period toggle) over a chart section — weekly created-vs-closed bars, a status breakdown, a GitHub-style daily-activity heatmap doubling as a streak visual, and day-of-week/time-of-day distributions — plus a searchable archive of everything completed
 - In-app notifications: a bell with an unread badge for tasks/subtasks due soon, backed by a daily email digest (see [Deployment](#deployment) for how the digest actually runs in production vs. local dev)
 - Calendar: Month/Week/Day views (Week/Day on a real 24-hour hourly grid) over tasks, subtasks, and calendar items alike, with deadline-state color coding, a filterable rail, and quick-add straight from an empty day
+- Profile page: edit personal info, change password, and delete the account — each its own independent form and save action rather than one page-wide submit
+- Overdue banner: on opening the task list, a dismissible summary of whatever's past due (most overdue first) with links straight to each item
+- Loading states: every async page renders a skeleton shaped like its real content instead of a bare "Loading…" (see [Engineering Decisions](#skeleton-loaders-for-async-page-content))
 
 ### Authentication
 - Custom user model
@@ -164,16 +167,24 @@ The same page in two of its four deadline-driven states — in progress (purple,
 - GET /api/tasks/
 - POST /api/tasks/
 - GET /api/tasks/{id}/
-- PUT /api/tasks/{id}/
+- PUT/PATCH /api/tasks/{id}/
 - DELETE /api/tasks/{id}/
 
 - GET /api/subtasks/
 - POST /api/subtasks/
+- GET/PUT/PATCH/DELETE /api/subtasks/{id}/
 
 - GET /api/calendar-items/
 - POST /api/calendar-items/
 - DELETE /api/calendar-items/{id}/
+
+- GET /api/notifications/
+- PATCH /api/notifications/{id}/        (mark read — rows are only created by the digest job)
+
+- POST /api/internal/send-deadline-digest/   (token-protected; called by the GitHub Actions cron)
 ```
+
+Every endpoint is session-authenticated and scoped to the requesting user, except the internal digest trigger, which requires the `DIGEST_CRON_TOKEN` shared secret instead.
 
  ### Filtering Example
 
@@ -210,21 +221,13 @@ cd fauxcus
 
 ### 2. Create Environment Files
 
-Backend — create a `.env` in the project root:
+Backend — copy the example file to a `.env` in the project root:
 
+```bash
+cp .env.example .env
 ```
-DEBUG=True
 
-POSTGRES_DB=postgres
-POSTGRES_USER=postgres
-POSTGRES_PASSWORD=postgres
-POSTGRES_HOST=db
-POSTGRES_PORT=5432
-
-SECRET_KEY=your-secret-key
-ALLOWED_HOSTS=localhost,127.0.0.1
-FRONTEND_URL=http://localhost:3000
-```
+The defaults work for local dev as-is (Postgres and the Celery broker point at the `db` and `redis` containers `docker-compose.yml` starts). Set `SECRET_KEY` to something of your own. Signup emails its verification code over Gmail SMTP, so a new local signup only works once `EMAIL_HOST_USER`/`EMAIL_HOST_PASSWORD` hold a real Gmail app password; without one, create a user through the Django admin instead (`docker-compose exec web python backend/manage.py createsuperuser`). Everything else in the file is production-only (`DATABASE_URL`, `SENTRY_DSN`, `DIGEST_CRON_TOKEN`) and can stay blank.
 
 Frontend — create `frontend/.env`:
 
