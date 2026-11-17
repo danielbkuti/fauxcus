@@ -39,7 +39,9 @@ describe('StreakFire', () => {
     const [card, tile] = container.querySelectorAll('pixel-fire')
     expect(card.getAttribute('aria-hidden')).toBe('true')
     expect(card.getAttribute('height')).toBe(String(fireReach(5)))
-    expect(card.style.height).toBe('96px')
+    // One band height for every surface, so a streak burns the same size
+    // of fire on the card as on the tile.
+    expect(card.style.height).toBe('36px')
     expect(tile.style.height).toBe('36px')
   })
 })
@@ -50,13 +52,13 @@ describe('StreakCard', () => {
     expect(screen.getByText("You're on a 7-day streak.")).toBeInTheDocument()
     expect(screen.getByText('2 more due today — keep it going.')).toBeInTheDocument()
     expect(container.querySelector('pixel-fire')).not.toBeNull()
-    expect(container.firstChild.className).toContain('pb-[78px]')
+    expect(container.firstChild.className).toContain('pb-[40px]')
   })
 
   it('shows no fire and no extra padding without a streak', () => {
     const { container } = render(<StreakCard streak={0} dueToday={0} />)
     expect(screen.getByText('Check something off to start a streak.')).toBeInTheDocument()
     expect(container.querySelector('pixel-fire')).toBeNull()
-    expect(container.firstChild.className).not.toContain('pb-[78px]')
+    expect(container.firstChild.className).not.toContain('pb-[40px]')
   })
 })

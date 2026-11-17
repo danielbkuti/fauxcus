@@ -326,7 +326,7 @@ function useClock() {
 function StatCard({ value, label, flame, streak = 0, loading }) {
   const lit = !loading && streak > 0
   return (
-    <div className={cn('relative flex min-w-[120px] flex-1 flex-col gap-[3px] overflow-hidden rounded-[12px] bg-white/8 p-[14px_18px] shadow-[inset_0_0_0_1px_rgba(255,255,255,.16)] backdrop-blur-[6px]', lit && FIRE_PAD.tile)}>
+    <div className={cn('font-display relative flex min-w-[120px] flex-1 flex-col gap-[3px] overflow-hidden rounded-[12px] bg-white/8 p-[14px_18px] shadow-[inset_0_0_0_1px_rgba(255,255,255,.16)] backdrop-blur-[6px]', lit && FIRE_PAD.tile)}>
       {lit && <StreakFire streak={streak} size="tile" />}
       {loading ? (
         <span aria-hidden="true" className="block h-[26px] w-9 animate-pulse rounded-md bg-white/20" />
@@ -403,7 +403,7 @@ function MonthDayCell({ cell, isToday, isSelected, items, hasAnyItems, nowMs, ca
         <div className="flex items-center justify-between">
           {isToday ? (
             <span
-              className="flex h-6 min-w-6 items-center justify-center rounded-[8px] px-1.5 font-display text-[17px] font-bold text-white"
+              className="flex h-6 min-w-6 items-center justify-center rounded-[8px] px-1.5 text-[17px] font-bold text-white"
               style={{ background: 'linear-gradient(to bottom right,#7c5fb0,#8ec5fc)' }}
             >
               {cell.date.getDate()}
@@ -419,7 +419,7 @@ function MonthDayCell({ cell, isToday, isSelected, items, hasAnyItems, nowMs, ca
             // when it's genuinely out of view, not this.
             <span
               className={cn(
-                'font-display text-[17px] font-semibold tabular-nums',
+                'text-[17px] font-semibold tabular-nums',
                 cell.inMonth ? 'text-[#33224a]' : 'text-[#b3afbd]'
               )}
             >
@@ -451,7 +451,7 @@ function MonthDayCell({ cell, isToday, isSelected, items, hasAnyItems, nowMs, ca
 
       {!loading && active && overflow > 0 && (
         <div className="absolute left-1/2 top-full z-20 w-[238px] -translate-x-1/2 translate-y-2 rounded-xl bg-white p-[12px_13px] shadow-[0_18px_40px_-18px_rgba(37,37,37,.55),0_0_0_1px_rgba(51,34,74,.08)]">
-          <p className="mb-2 font-display text-xs font-semibold text-[#33224a]">
+          <p className="mb-2 text-xs font-semibold text-[#33224a]">
             {cell.date.toLocaleDateString(undefined, { weekday: 'long' })} {cell.date.getDate()} — {items.length} item
             {items.length === 1 ? '' : 's'}
           </p>
@@ -776,7 +776,7 @@ function DayView({ date, items, nowMs, loading, slideDirection }) {
       style={{ boxShadow: CARD_SHADOW }}
     >
       <div className="flex items-baseline justify-between border-b border-[#ece9f2] p-[20px_22px]">
-        <h2 className="m-0 font-display text-xl font-semibold text-[#33224a]">
+        <h2 className="m-0 text-xl font-semibold text-[#33224a]">
           {date.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
         </h2>
         <span className="text-xs font-bold text-[#a8a5a0]">
@@ -929,7 +929,7 @@ function SelectedDayCard({ date, isToday, items, nowMs, loading, onToggle, onDel
       <p className="text-[14px] font-bold uppercase tracking-[.09em] text-[#a8a5a0]">
         {isToday ? 'Today · selected day' : 'Selected day'}
       </p>
-      <h3 className="mt-1 font-display text-xl font-semibold text-[#33224a]">
+      <h3 className="mt-1 text-xl font-semibold text-[#33224a]">
         {date.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'short' })}
       </h3>
 
@@ -1247,7 +1247,7 @@ export function CalendarPage() {
       <div className="mx-auto max-w-[1152px] px-6 pt-8 pb-14">
         {/* ---- hero ---- */}
         <div
-          className="relative isolate overflow-hidden rounded-[18px] bg-[#05060b] p-[30px] shadow-[0_18px_40px_-28px_rgba(37,37,37,.65)]"
+          className="font-display relative isolate overflow-hidden rounded-[18px] bg-[#05060b] p-[30px] shadow-[0_18px_40px_-28px_rgba(37,37,37,.65)]"
         >
             <Starfield />
           <span aria-hidden="true" className="gradient-ring" style={{ zIndex: 3 }} />

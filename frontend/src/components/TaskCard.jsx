@@ -394,7 +394,7 @@ export function SubtaskStackCard({
       />
       <span
         className={cn(
-          'flex-1 truncate font-body text-[14px] font-medium transition-colors duration-300',
+          'flex-1 truncate font-medium transition-colors duration-300',
           checked && (effectiveState === 'done' ? TITLE_CLASS.done : 'text-muted-foreground line-through')
         )}
       >
@@ -488,7 +488,7 @@ export function SubtaskStackCard({
               onClick={(e) => e.stopPropagation()}
               className="absolute top-full right-0 z-20 mt-1 w-44 rounded-lg border bg-card p-2.5 text-left shadow-lg"
             >
-              <p className="font-body text-[13px] text-muted-foreground">Are you sure you want to delete this subtask?</p>
+              <p className="text-[14px] text-muted-foreground">Are you sure you want to delete this subtask?</p>
               <div className="mt-2 flex justify-end gap-2">
                 <button
                   type="button"
@@ -608,7 +608,7 @@ export function SubtaskStackCard({
         <button
           type="button"
           onClick={partOf.onClick}
-          className="flex w-fit items-center gap-1 font-body text-[13px] text-muted-foreground transition-colors hover:text-sky-600"
+          className="flex w-fit items-center gap-1 text-[14px] text-muted-foreground transition-colors hover:text-sky-600"
         >
           <CornerDownRight className="size-3.5 shrink-0" aria-hidden="true" />
           <span className="truncate">{partOf.label}</span>
@@ -1096,7 +1096,7 @@ export function TaskCard({
           <div className="shrink-0" onClick={(e) => e.stopPropagation()}>
             {confirmingDelete ? (
               <div className="flex flex-col items-end gap-1">
-                <p className="font-body text-[13px] text-muted-foreground">Are you sure you want to delete this task?</p>
+                <p className="text-xs text-muted-foreground">Are you sure you want to delete this task?</p>
                 <div className="flex items-center gap-1">
                   <Button size="sm" variant="destructive" onClick={handleDeleteConfirm} disabled={deleting}>
                     {deleting ? 'Deleting…' : 'Confirm'}
@@ -1150,7 +1150,7 @@ export function TaskCard({
             )}
           </div>
         </div>
-        <p className={cn('mt-1 font-body text-[13px]', state === 'progress' ? 'text-muted-foreground' : cn('font-bold', META_CLASS[state]))}>
+        <p className={cn('mt-1 text-xs', state === 'progress' ? 'text-muted-foreground' : cn('font-bold', META_CLASS[state]))}>
           {progress}% complete
           {blockedFromCompleting && ' · Complete all subtasks to mark this task done.'}
         </p>
@@ -1184,7 +1184,7 @@ export function TaskCard({
             >
               {expanded ? 'Click to collapse' : 'Click to see more'}
             </div>
-            <p className="mb-1.5 font-body text-[13px] font-medium text-muted-foreground">
+            <p className="mb-1.5 text-xs font-medium text-muted-foreground">
               {previewSubtasks.length > 0 ? 'Next up' : 'All done'}
             </p>
 
@@ -1280,7 +1280,7 @@ export function TaskCard({
               />
             </div>
           ) : task.subtasks.length === 0 ? (
-            <p className="mt-4 font-body text-[13px] text-muted-foreground">
+            <p className="mt-4 text-xs text-muted-foreground">
               Want to break this down into smaller chunks?{' '}
               <button
                 type="button"
