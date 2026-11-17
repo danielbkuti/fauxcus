@@ -191,7 +191,7 @@ export function ProfilePage() {
           generic skeleton block into a completely different-looking
           hero once the fetch resolves. */}
       <div
-        className="relative isolate overflow-hidden rounded-[18px] bg-[#05060b] p-[26px] shadow-[0_18px_40px_-28px_rgba(37,37,37,.65)]"
+        className="font-display relative isolate overflow-hidden rounded-[18px] bg-[#05060b] p-[26px] shadow-[0_18px_40px_-28px_rgba(37,37,37,.65)]"
       >
         <Starfield />
         <span aria-hidden="true" className="gradient-ring" style={{ zIndex: 3 }} />

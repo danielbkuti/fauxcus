@@ -32,20 +32,19 @@
 
 @theme inline {
     --font-heading: var(--font-sans);
-    /* Jersey 10 (Google Fonts) is the one typeface for the whole product —
-       UI, headings and the logo wordmark. It has a single weight and a
-       small x-height, so the text scale below is bumped ~1.3x and bold is
-       never synthesised (see the html rule further down). --font-display
-       is kept as its own token so existing `font-display` classes keep
-       working, but it resolves to the same face. */
-    --font-sans: 'Jersey 10', sans-serif;
-    --font-display: var(--font-sans);
-    /* Spectral is the reading face: the descriptive text inside task
-       cards and task details (`font-body`). It has real weights and a
-       normal x-height, so — unlike Jersey 10 — it does NOT want the 1.3x
-       bumped text scale; elements using it carry their own (smaller)
-       explicit size next to the `font-body` class. */
-    --font-body: 'Spectral', Georgia, serif;
+    /* Two faces. Spectral (Google Fonts) is the default for the whole web
+       app. Jersey 10 (`font-display`) is reserved for the major cards —
+       the welcome/page heroes, the streak cards and tiles, the logo —
+       and for the Progress and Landing pages' display type. Put
+       `font-display` on a card's container and everything inside it
+       follows.
+
+       Jersey 10 has a small x-height, so the text scale below is bumped
+       ~1.3x for it. Spectral doesn't want that, so the html rule further
+       down shrinks it back with `font-size-adjust`, and `.font-display`
+       turns the adjustment off again. */
+    --font-sans: 'Spectral', Georgia, serif;
+    --font-display: 'Jersey 10', sans-serif;
     --color-sidebar-ring: var(--sidebar-ring);
     --color-sidebar-border: var(--sidebar-border);
     --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -166,9 +165,23 @@
     @apply font-sans;
     /* Jersey 10 ships one weight. Without this the browser fakes bold by
        smearing the pixel glyphs, which reads as blur — so font-bold /
-       font-semibold simply render as regular. */
+       font-semibold simply render as regular there. (Spectral has real
+       weights, so it's unaffected.) */
     font-synthesis: none;
+    /* The sizes in this app are tuned for Jersey 10's small x-height (see
+       the bumped scale above). font-size-adjust sizes each font so its
+       x-height is 0.40 of the font-size: Spectral (x-height ~0.46) renders
+       ~13% smaller than the nominal size, landing near the original
+       pre-Jersey sizes. Inherited, so it covers everything — except
+       `.font-display`, which opts out below. */
+    font-size-adjust: 0.4;
     }
+}
+
+/* Jersey 10 surfaces: no x-height adjustment — the scale is already
+   tuned for it. Inherits down to every descendant. */
+.font-display {
+  font-size-adjust: none;
 }
 
 /* Task-completion confetti burst (TaskCard) — a plain @keyframes rather

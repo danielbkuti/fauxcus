@@ -18,14 +18,18 @@ export function fireReach(streak) {
   return Math.min(54, 30 + Math.min(streak, 30) * 0.8)
 }
 
-// Band height per surface: `card` for the big rail cards, `tile` for the
-// small stat tiles. The flames fill their band at any streak length that
-// still reads as fire (a low `height` just gives a thin red/white strip),
-// so the tile's band is kept short rather than its reach turned down.
-const BAND = { card: 96, tile: 36 }
+// Band height per surface. The flame height is a percentage of the band
+// (see fireReach), so two bands of different heights burn visibly
+// differently at the same streak — the 96px card used to look more
+// "inflamed" than the 36px stat tile next to it. Every surface now shares
+// one band height so a given streak always burns the same size of fire,
+// wherever it's shown. The `size` prop is kept so call sites still say
+// which surface they are.
+const BAND_HEIGHT = 36
+const BAND = { card: BAND_HEIGHT, tile: BAND_HEIGHT }
 
 // Extra bottom padding each surface needs so its copy clears the flames.
-export const FIRE_PAD = { card: 'pb-[78px]', tile: 'pb-[40px]', panel: 'pb-[40px]' }
+export const FIRE_PAD = { card: 'pb-[40px]', tile: 'pb-[40px]', panel: 'pb-[40px]' }
 
 // A zero streak has no fire at all — there's nothing to be burning — so
 // callers can render this unconditionally and size their own padding
@@ -52,7 +56,7 @@ export function StreakCard({ streak, dueToday }) {
   const lit = streak > 0
   return (
     <div
-      className={cn('relative isolate overflow-hidden rounded-[14px] bg-[#05060b] p-[18px] text-white', lit && FIRE_PAD.card)}
+      className={cn('font-display relative isolate overflow-hidden rounded-[14px] bg-[#05060b] p-[18px] text-white', lit && FIRE_PAD.card)}
     >
       <Starfield shooting={false} />
       <StreakFire streak={streak} />

@@ -121,7 +121,7 @@ function QuickStartCard({
           <EyebrowIcon className="size-[17px]" strokeWidth={2} />
           {eyebrowLabel}
         </span>
-        <span className="font-display text-xs font-semibold tabular-nums" style={{ opacity: 0.78 }}>
+        <span className="text-xs font-semibold tabular-nums" style={{ opacity: 0.78 }}>
           {meta}
         </span>
       </div>
@@ -131,7 +131,7 @@ function QuickStartCard({
       </div>
 
       <div className="flex items-end justify-between gap-3">
-        <h3 className="max-w-[150px] font-display text-[27px] font-semibold leading-[1.15]">
+        <h3 className="max-w-[150px] text-[27px] font-semibold leading-[1.15]">
           {title}
         </h3>
         <span
@@ -469,7 +469,7 @@ export function Dashboard({ firstName, username, justLoggedIn, onWelcomeSeen }) 
           uses (.gradient-ring, index.css), just sized up for the hero's
           own radius via `border-radius: inherit`. */}
       <div
-        className="relative isolate overflow-hidden rounded-[18px] bg-[#05060b] p-[30px] shadow-[0_18px_40px_-28px_rgba(37,37,37,.65)]"
+        className="font-display relative isolate overflow-hidden rounded-[18px] bg-[#05060b] p-[30px] shadow-[0_18px_40px_-28px_rgba(37,37,37,.65)]"
       >
           <Starfield />
         <span aria-hidden="true" className="gradient-ring" style={{ zIndex: 3 }} />
@@ -539,7 +539,7 @@ export function Dashboard({ firstName, username, justLoggedIn, onWelcomeSeen }) 
 
       {/* Quick start */}
       <div className="mt-9 mb-4 flex items-baseline justify-between">
-        <h2 className="m-0 font-display text-[20px] font-semibold tracking-[.02em] text-foreground">Quick start</h2>
+        <h2 className="m-0 text-[23px] font-semibold text-foreground">Quick start</h2>
         <span className="text-xs text-[#a8a5a0]">Three ways in</span>
       </div>
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
@@ -593,7 +593,7 @@ export function Dashboard({ firstName, username, justLoggedIn, onWelcomeSeen }) 
               <>
                 <div className="flex items-baseline justify-between">
                   <span className="text-xs font-bold text-white">Ship v2</span>
-                  <span className="font-display text-[20px] font-semibold text-white tabular-nums">82%</span>
+                  <span className="text-[20px] font-semibold text-white tabular-nums">82%</span>
                 </div>
                 <div key={hovered} className="h-2 overflow-hidden rounded-full bg-white/25">
                   <span
@@ -670,7 +670,7 @@ export function Dashboard({ firstName, username, justLoggedIn, onWelcomeSeen }) 
       <div className="mt-9 grid grid-cols-1 items-start gap-6 lg:grid-cols-[1fr_336px]">
         <div>
           <div className="mb-3.5 flex items-center justify-between">
-            <h2 className="m-0 font-display text-[20px] font-semibold tracking-[.02em] text-foreground">Upcoming</h2>
+            <h2 className="m-0 text-[23px] font-semibold text-foreground">Upcoming</h2>
             <Link to="/tasks" className="text-xs font-medium text-sky-600 hover:underline">
               View all tasks →
             </Link>
@@ -725,7 +725,7 @@ export function Dashboard({ firstName, username, justLoggedIn, onWelcomeSeen }) 
         </div>
 
         <div className="flex flex-col gap-3.5">
-          <h2 className="m-0 font-display text-[20px] font-semibold tracking-[.02em] text-foreground">Goals in progress</h2>
+          <h2 className="m-0 text-[23px] font-semibold text-foreground">Goals in progress</h2>
           <GoalsComingSoonCard />
           <StreakCard streak={currentStreak} dueToday={dueToday} />
         </div>
