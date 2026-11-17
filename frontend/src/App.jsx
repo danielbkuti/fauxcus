@@ -114,12 +114,6 @@ function App() {
   const [authState, setAuthState] = useState('loading')
   const [username, setUsername] = useState(null)
   const [firstName, setFirstName] = useState('')
-  // Set only by handleAuthSuccess (an actual login/signup/reset this
-  // session) — never by the silent checkAuth() on load — so Dashboard's
-  // welcome-name animation plays once right after signing in, not on
-  // every later visit to /home. Dashboard consumes it on mount via
-  // onWelcomeSeen, so it doesn't replay on a later navigation back here.
-  const [justLoggedIn, setJustLoggedIn] = useState(false)
 
   useEffect(() => {
     checkAuth()
@@ -146,7 +140,6 @@ function App() {
     setUsername(data.username)
     setFirstName(data.first_name)
     setAuthState('authenticated')
-    setJustLoggedIn(true)
   }
 
   if (authState === 'loading') {
@@ -276,12 +269,7 @@ function App() {
         <Route
           path="/home"
           element={
-            <Dashboard
-              firstName={firstName}
-              username={username}
-              justLoggedIn={justLoggedIn}
-              onWelcomeSeen={() => setJustLoggedIn(false)}
-            />
+            <Dashboard firstName={firstName} username={username} />
           }
         />
         <Route path="/tasks" element={<TasksPage />} />

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { SquarePlus, Target, CalendarDays, Sparkles, Flame, ArrowRight, Hammer } from 'lucide-react'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -105,7 +105,7 @@ function QuickStartCard({
       onMouseLeave={() => setHovered(false)}
       onFocus={() => setHovered(true)}
       onBlur={() => setHovered(false)}
-      className="relative flex h-[252px] flex-col justify-between rounded-[14px] p-5 outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2"
+      className="relative flex flex-col gap-4 rounded-[14px] p-5 outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2"
       style={{
         background,
         color: ink,
@@ -130,8 +130,12 @@ function QuickStartCard({
         {preview(hovered)}
       </div>
 
-      <div className="flex items-end justify-between gap-3">
-        <h3 className="max-w-[150px] text-[27px] font-semibold leading-[1.15]">
+      {/* Title and button share one line. The title never wraps (it used
+          to sit in a 150px column and break onto two lines, leaving the
+          card taller than its content needed); `truncate` is only a
+          safety net for very narrow cards. */}
+      <div className="flex items-center justify-between gap-3">
+        <h3 className="min-w-0 truncate text-[21px] leading-[1.15] font-semibold whitespace-nowrap">
           {title}
         </h3>
         <span
@@ -320,21 +324,35 @@ function GoalsComingSoonCard() {
   )
 }
 
-export function Dashboard({ firstName, username, justLoggedIn, onWelcomeSeen }) {
+export function Dashboard({ firstName, username }) {
   const { tasks, status, refreshTasks } = useTaskStore()
   const displayName = firstName || username || 'there'
   const now = useClock()
   const reducedMotion = usePrefersReducedMotion()
   const { currentStreak } = computeStats(tasks).habits
-  // Captured once, on mount — whether *this* render of the dashboard
-  // followed an actual login (not a later navigation back to /home in
-  // the same session). Consuming the prop via onWelcomeSeen right away
-  // means a later remount (e.g. logout/login again) can retrigger it,
-  // but simply revisiting /home afterward can't.
-  const [animateWelcome] = useState(() => Boolean(justLoggedIn))
+  // The welcome-name fill replays every time the greeting is brought into
+  // view — on page load or refresh, on navigating back to /home, and on
+  // scrolling it back on screen after it had left. `nameFillKey` is the
+  // replay trigger: the overlay is keyed on it, so bumping it remounts the
+  // overlay and restarts its CSS animation from the first frame. 0 means
+  // "not shown yet" (the plain name is all that's on screen until the
+  // greeting is first seen).
+  const welcomeRef = useRef(null)
+  const [nameFillKey, setNameFillKey] = useState(0)
   useEffect(() => {
-    if (justLoggedIn) onWelcomeSeen?.()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    const el = welcomeRef.current
+    if (!el || typeof IntersectionObserver === 'undefined') {
+      setNameFillKey(1)
+      return undefined
+    }
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) setNameFillKey((k) => k + 1)
+      },
+      { threshold: 0.6 }
+    )
+    observer.observe(el)
+    return () => observer.disconnect()
   }, [])
   // Kind-prefixed ids (`task-3`, `subtask-9`) currently mid-celebration
   // — kept in the list (checked, struck through) even though they're
@@ -477,25 +495,24 @@ export function Dashboard({ firstName, username, justLoggedIn, onWelcomeSeen }) 
           <div className="flex items-start justify-between gap-5">
             <div className="flex flex-col gap-2">
               <span className="text-[14px] font-bold uppercase tracking-[.12em] text-white/55">{formatNow(now)}</span>
-              <h1 className="m-0 font-display text-[57px] font-bold leading-[1.05] text-white">
+              <h1 ref={welcomeRef} className="m-0 font-display text-[57px] font-bold leading-[1.05] text-white">
                 Welcome back,{' '}
-                {animateWelcome ? (
-                  // Overlay technique (base copy underneath for a11y + layout,
-                  // gradient-clipped copy on top, wiped in via clip-path) — same
-                  // two-layer idea Logo.jsx uses for its outline, just animated
-                  // once instead of static.
-                  <span className="relative inline-block">
-                    <span>{displayName}</span>
+                {/* Overlay technique (base copy underneath for a11y + layout,
+                    gradient-clipped copy on top, wiped in via clip-path) — same
+                    two-layer idea Logo.jsx uses for its outline, just animated.
+                    The overlay's key restarts the wipe on every replay. */}
+                <span className="relative inline-block">
+                  <span>{displayName}</span>
+                  {nameFillKey > 0 && (
                     <span
+                      key={nameFillKey}
                       aria-hidden="true"
                       className="welcome-name-gradient animate-welcome-name-fill absolute inset-0"
                     >
                       {displayName}
                     </span>
-                  </span>
-                ) : (
-                  displayName
-                )}
+                  )}
+                </span>
               </h1>
               {status === 'loading' ? (
                 <Skeleton className="mt-0.5 h-[17px] w-56 max-w-full bg-white/15" />
@@ -542,7 +559,10 @@ export function Dashboard({ firstName, username, justLoggedIn, onWelcomeSeen }) 
         <h2 className="m-0 text-[23px] font-semibold text-foreground">Quick start</h2>
         <span className="text-xs text-[#a8a5a0]">Three ways in</span>
       </div>
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
+      {/* Three across only from lg: the single-line title + button needs
+          ~300px of card, which a 640–1023px viewport can't give three
+          columns. */}
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
         <QuickStartCard
           to="/tasks/new"
           background="linear-gradient(160deg,#f2e6ff 0%,#e0c3fc 52%,#c9a5ee 100%)"
