@@ -10,6 +10,7 @@ import { useExclusiveDeadlineEditor } from '@/hooks/useExclusiveDeadlineEditor'
 import { AddSubtaskForm } from '@/components/AddSubtaskForm'
 import { TaskFireworks, SubtaskConfetti, CompletionWash } from '@/components/TaskDetailCelebrations'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Starfield } from '@/components/Starfield'
 
 // How long a just-checked subtask stays in place (checkbox filled
 // green, name struck through) before it's actually allowed to resort
@@ -710,17 +711,20 @@ export function TaskDetailPage() {
 
         <div className="relative z-[2] grid grid-cols-1 items-start md:grid-cols-[246px_1fr]">
           {/* ---------------------------------------------------------- Left rail */}
+          {/* The one Jersey 10 surface on this page (`font-display` carries
+              everything inside it), sat on the same dark starfield as the
+              app's other major cards — so the ink in here is light, with
+              the state theme showing through only in the ring and the
+              action button. */}
           <div
-            className="flex flex-col gap-5 self-stretch border-b px-5 py-[22px] md:border-r md:border-b-0"
-            style={{
-              background: 'linear-gradient(180deg,rgba(255,255,255,.82),rgba(255,255,255,.5))',
-              borderColor: theme.hairline,
-            }}
+            className="font-display relative isolate flex flex-col gap-5 self-stretch overflow-hidden border-b bg-[#05060b] px-5 py-[22px] md:border-r md:border-b-0"
+            style={{ borderColor: theme.hairline }}
           >
+            <Starfield pixelSize={3} shooting={false} />
             <Link
               to="/tasks"
               className="inline-flex items-center gap-1 text-xs font-bold"
-              style={{ color: theme.strong }}
+              style={{ color: 'rgba(255,255,255,.85)' }}
             >
               <ArrowLeft className="size-3.5" />
               Back to tasks
@@ -731,7 +735,7 @@ export function TaskDetailPage() {
             <div className="flex flex-col items-center gap-1.5">
               <PrimaryActionButton task={task} theme={theme} onClick={handleToggleTaskComplete} />
               {!task.completed && hasSubtasks && (
-                <p className="text-center text-[14px]" style={{ color: theme.strong }}>
+                <p className="text-center text-[14px]" style={{ color: 'rgba(255,255,255,.7)' }}>
                   {openCount > 0
                     ? `Completing from here closes ${pluralize(openCount, 'open subtask')}.`
                     : 'Every subtask is already done.'}
@@ -742,7 +746,7 @@ export function TaskDetailPage() {
             <div ref={deadlineSectionRef} className="flex flex-col gap-2.5">
               {task.completed ? (
                 <div>
-                  <p className="text-[13px] font-black tracking-[.12em] uppercase" style={{ color: theme.strong }}>
+                  <p className="text-[13px] font-black tracking-[.12em] uppercase" style={{ color: RAIL_LABEL }}>
                     Deadline
                   </p>
                   <div className="mt-1 rounded-xl border bg-white px-3 py-2" style={{ borderColor: theme.hairline }}>
@@ -758,7 +762,7 @@ export function TaskDetailPage() {
                 </div>
               ) : (
                 <div ref={deadlineAnchorRef} className="relative">
-                  <p className="text-[13px] font-black tracking-[.12em] uppercase" style={{ color: theme.strong }}>
+                  <p className="text-[13px] font-black tracking-[.12em] uppercase" style={{ color: RAIL_LABEL }}>
                     Deadline
                   </p>
                   {editingDeadline && (
@@ -798,26 +802,26 @@ export function TaskDetailPage() {
               )}
 
               <div>
-                <p className="text-[13px] font-black tracking-[.12em] uppercase" style={{ color: 'oklch(0.556 0 0)' }}>
+                <p className="text-[13px] font-black tracking-[.12em] uppercase" style={{ color: RAIL_LABEL }}>
                   Created
                 </p>
-                <p className="mt-1 text-[16px] font-bold" style={{ color: 'oklch(0.35 0 0)' }}>
+                <p className="mt-1 text-[16px] font-bold" style={{ color: 'rgba(255,255,255,.9)' }}>
                   {formatDeadline(task.dateCreated)}
                 </p>
               </div>
 
               {windowFraction !== null && (
                 <div>
-                  <p className="text-[13px] font-black tracking-[.12em] uppercase" style={{ color: theme.strong }}>
+                  <p className="text-[13px] font-black tracking-[.12em] uppercase" style={{ color: RAIL_LABEL }}>
                     Time window
                   </p>
-                  <div className="mt-1.5 h-[5px] w-full overflow-hidden rounded-full" style={{ background: theme.soft }}>
+                  <div className="mt-1.5 h-[5px] w-full overflow-hidden rounded-full" style={{ background: 'rgba(255,255,255,.16)' }}>
                     <div
                       className="h-full w-full origin-left rounded-full transition-transform duration-500 ease-out"
                       style={{ transform: `scaleX(${windowFraction})`, background: theme.windowFill }}
                     />
                   </div>
-                  <p className="mt-1 text-[14px] font-bold" style={{ color: theme.strong }}>
+                  <p className="mt-1 text-[14px] font-bold" style={{ color: 'rgba(255,255,255,.75)' }}>
                     {Math.round(windowFraction * 100)}% of the window used
                   </p>
                 </div>
@@ -852,7 +856,7 @@ export function TaskDetailPage() {
                 <button
                   type="button"
                   onClick={() => setConfirmingDelete(true)}
-                  className="flex w-full items-center justify-center gap-1.5 rounded-full px-4 py-2 text-xs font-bold text-muted-foreground transition-colors hover:bg-red-100 hover:text-red-700"
+                  className="flex w-full items-center justify-center gap-1.5 rounded-full px-4 py-2 text-xs font-bold text-white/60 transition-colors hover:bg-red-500/20 hover:text-red-300"
                 >
                   <Trash2 className="size-3.5" />
                   Delete task
@@ -1035,8 +1039,12 @@ function PrimaryActionButton({ task, theme, onClick }) {
   )
 }
 
-// 150x150 SVG dial, rotated so the fill starts at 12 o'clock. Track is
-// the state's `soft` colour; the fill is a per-instance gradient (a
+// Muted ink for the small caps labels in the (dark) left rail.
+const RAIL_LABEL = 'rgba(255,255,255,.6)'
+
+// 150x150 SVG dial, rotated so the fill starts at 12 o'clock. It sits on
+// the rail's dark starfield, so the track is a faint white and the text
+// white; the fill is a per-instance gradient in the state's colours (a
 // stable id via useId, since more than one dial could theoretically
 // exist in the DOM at once and gradient ids are global).
 function ProgressDial({ pct, k, n, theme }) {
@@ -1056,7 +1064,7 @@ function ProgressDial({ pct, k, n, theme }) {
             })}
           </linearGradient>
         </defs>
-        <circle cx="75" cy="75" r={radius} fill="none" stroke={theme.soft} strokeWidth="13" />
+        <circle cx="75" cy="75" r={radius} fill="none" stroke="rgba(255,255,255,.14)" strokeWidth="13" />
         <circle
           cx="75"
           cy="75"
@@ -1071,10 +1079,10 @@ function ProgressDial({ pct, k, n, theme }) {
         />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-[42px] leading-none font-black" style={{ color: theme.title }}>
+        <span className="text-[42px] leading-none font-black text-white">
           {pct}%
         </span>
-        <span className="mt-1.5 text-[14px] font-bold" style={{ color: theme.strong }}>
+        <span className="mt-1.5 text-[14px] font-bold" style={{ color: 'rgba(255,255,255,.75)' }}>
           {k} of {n} done
         </span>
       </div>

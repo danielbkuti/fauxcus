@@ -65,7 +65,7 @@ export function NavBar({ firstName, onLogout }) {
     )
 
   return (
-    <header className="fixed inset-x-0 top-0 z-50">
+    <header className="font-display fixed inset-x-0 top-0 z-50">
       {/* Flat, off-white layer — visible at rest, fades out on scroll. */}
       <div
         className={cn(
