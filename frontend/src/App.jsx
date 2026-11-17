@@ -24,6 +24,29 @@ import { AddTaskFabProvider } from '@/context/AddTaskFabContext'
 import { Skeleton } from '@/components/ui/skeleton'
 import { checkAuth, logout } from '@/lib/auth'
 
+// The Dashboard's welcome-name animation plays on an explicit sign-in
+// *and* once per browser tab session. The second case is what makes it
+// visible on a deployed site, where the session cookie usually survives
+// between visits so there's no sign-in to hang the animation on —
+// without it the animation would effectively never run in production.
+// sessionStorage is per-tab and cleared when the tab closes; it can throw
+// (private windows, blocked storage), in which case we just skip it.
+const WELCOMED_KEY = 'fauxcus:welcomed'
+function hasWelcomedThisSession() {
+  try {
+    return sessionStorage.getItem(WELCOMED_KEY) === '1'
+  } catch {
+    return true
+  }
+}
+function markWelcomedThisSession() {
+  try {
+    sessionStorage.setItem(WELCOMED_KEY, '1')
+  } catch {
+    // storage unavailable — nothing to remember, fine.
+  }
+}
+
 // Wraps every public route (landing, login, signup, verify) so the
 // gradient is one persistent element that never unmounts as you
 // navigate between them — not a copy re-painted on each page. <Outlet />
@@ -114,11 +137,12 @@ function App() {
   const [authState, setAuthState] = useState('loading')
   const [username, setUsername] = useState(null)
   const [firstName, setFirstName] = useState('')
-  // Set only by handleAuthSuccess (an actual login/signup/reset this
-  // session) — never by the silent checkAuth() on load — so Dashboard's
-  // welcome-name animation plays once right after signing in, not on
-  // every later visit to /home. Dashboard consumes it on mount via
-  // onWelcomeSeen, so it doesn't replay on a later navigation back here.
+  // Set by handleAuthSuccess (an actual login/signup/reset) and by the
+  // silent checkAuth() on load the first time this tab session has seen
+  // the app (see hasWelcomedThisSession) — so Dashboard's welcome-name
+  // animation plays once per sign-in / per tab, not on every later visit
+  // to /home. Dashboard consumes it on mount via onWelcomeSeen, so it
+  // doesn't replay on a later navigation back here.
   const [justLoggedIn, setJustLoggedIn] = useState(false)
 
   useEffect(() => {
@@ -127,6 +151,7 @@ function App() {
         if (data.authenticated) {
           setUsername(data.username)
           setFirstName(data.first_name)
+          setJustLoggedIn(!hasWelcomedThisSession())
           setAuthState('authenticated')
         } else {
           setAuthState('anonymous')
@@ -280,7 +305,10 @@ function App() {
               firstName={firstName}
               username={username}
               justLoggedIn={justLoggedIn}
-              onWelcomeSeen={() => setJustLoggedIn(false)}
+              onWelcomeSeen={() => {
+                markWelcomedThisSession()
+                setJustLoggedIn(false)
+              }}
             />
           }
         />

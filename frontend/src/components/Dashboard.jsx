@@ -105,7 +105,7 @@ function QuickStartCard({
       onMouseLeave={() => setHovered(false)}
       onFocus={() => setHovered(true)}
       onBlur={() => setHovered(false)}
-      className="relative flex h-[252px] flex-col justify-between rounded-[14px] p-5 outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2"
+      className="relative flex flex-col gap-4 rounded-[14px] p-5 outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2"
       style={{
         background,
         color: ink,
@@ -130,8 +130,12 @@ function QuickStartCard({
         {preview(hovered)}
       </div>
 
-      <div className="flex items-end justify-between gap-3">
-        <h3 className="max-w-[150px] text-[27px] font-semibold leading-[1.15]">
+      {/* Title and button share one line. The title never wraps (it used
+          to sit in a 150px column and break onto two lines, leaving the
+          card taller than its content needed); `truncate` is only a
+          safety net for very narrow cards. */}
+      <div className="flex items-center justify-between gap-3">
+        <h3 className="min-w-0 truncate text-[21px] leading-[1.15] font-semibold whitespace-nowrap">
           {title}
         </h3>
         <span
@@ -542,7 +546,10 @@ export function Dashboard({ firstName, username, justLoggedIn, onWelcomeSeen }) 
         <h2 className="m-0 text-[23px] font-semibold text-foreground">Quick start</h2>
         <span className="text-xs text-[#a8a5a0]">Three ways in</span>
       </div>
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
+      {/* Three across only from lg: the single-line title + button needs
+          ~300px of card, which a 640–1023px viewport can't give three
+          columns. */}
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
         <QuickStartCard
           to="/tasks/new"
           background="linear-gradient(160deg,#f2e6ff 0%,#e0c3fc 52%,#c9a5ee 100%)"
