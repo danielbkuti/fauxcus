@@ -1,8 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { SquarePlus, Target, CalendarDays, Sparkles, Flame, ArrowRight, Hammer } from 'lucide-react'
+import { SquarePlus, Target, CalendarDays, Sparkles, Flame, ArrowRight } from 'lucide-react'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Skeleton } from '@/components/ui/skeleton'
+import { GoalProgressBar } from '@/components/GoalProgress'
+import { useGoals } from '@/hooks/useGoals'
+import { describeTimeLeft, sortActiveGoals } from '@/lib/goals'
 import { PulseRing } from '@/components/PulseRing'
 import { FIRE_PAD, StreakCard, StreakFire } from '@/components/StreakFire'
 import { cn } from '@/lib/utils'
@@ -304,28 +307,86 @@ function UpcomingRow({ item, celebrating, onToggle }) {
   )
 }
 
-// Right-rail "Goals in progress" card while Goals itself doesn't exist
-// yet — same tone/copy pattern as ComingSoonPage, sized to sit
-// naturally alongside the Upcoming list rather than a full-page state.
-function GoalsComingSoonCard() {
-  return (
-    <Link
-      to="/goals"
-      className="group flex flex-col items-center gap-3 rounded-[14px] bg-card px-5 py-8 text-center ring-1 ring-foreground/10 transition-colors hover:bg-accent/50"
-    >
-      <div className="flex size-11 items-center justify-center rounded-full bg-[#7c5fb0]/10 text-[#7c5fb0] transition-transform duration-200 group-hover:scale-110">
-        <Hammer className="size-5" />
+// How many in-progress goals the right rail previews before deferring to
+// the full Goals page.
+const GOALS_PREVIEW_COUNT = 3
+
+// Right-rail "Goals in progress" card — the soonest-due active goals with
+// their progress, or an invitation to set the first one. `activeGoals` is
+// already sorted soonest-first by the caller.
+function GoalsInProgressCard({ activeGoals, status }) {
+  if (status === 'loading') {
+    return (
+      <div className="flex flex-col gap-2.5" aria-busy="true">
+        {[0, 1].map((i) => (
+          <div key={i} className="flex flex-col gap-2.5 rounded-[14px] bg-card px-[18px] py-4 ring-1 ring-foreground/10">
+            <div className="flex items-center justify-between gap-3">
+              <Skeleton className="h-4 w-2/3 rounded-md" />
+              <Skeleton className="h-4 w-14 rounded-full" />
+            </div>
+            <Skeleton className="h-2 w-full" />
+          </div>
+        ))}
       </div>
-      <p className="text-sm font-medium">Goals is on the way</p>
-      <p className="text-xs text-muted-foreground">
-        Set a bigger target and track progress toward it over time.
-      </p>
-    </Link>
+    )
+  }
+
+  if (status === 'error') {
+    return <p className="text-sm text-destructive">Couldn&apos;t load your goals. Try reloading.</p>
+  }
+
+  if (activeGoals.length === 0) {
+    return (
+      <Link
+        to="/goals/new"
+        className="group flex flex-col items-center gap-3 rounded-[14px] bg-card px-5 py-8 text-center ring-1 ring-foreground/10 transition-colors hover:bg-accent/50"
+      >
+        <div className="flex size-11 items-center justify-center rounded-full bg-[#7c5fb0]/10 text-[#7c5fb0] transition-transform duration-200 group-hover:scale-110">
+          <Target className="size-5" />
+        </div>
+        <p className="text-sm font-medium">No goals yet</p>
+        <p className="text-xs text-muted-foreground">
+          Set a bigger target and track progress toward it over time.
+        </p>
+      </Link>
+    )
+  }
+
+  const shown = activeGoals.slice(0, GOALS_PREVIEW_COUNT)
+  return (
+    <div className="flex flex-col gap-2.5">
+      {shown.map((goal) => {
+        const timeLeft = describeTimeLeft(goal.targetDate)
+        return (
+          <Link
+            key={goal.id}
+            to={`/goals/${goal.id}`}
+            className="flex flex-col gap-2.5 rounded-[14px] bg-card px-[18px] py-4 ring-1 ring-foreground/10 transition-colors outline-none hover:bg-accent/50 focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <div className="flex items-center justify-between gap-3">
+              <span className="min-w-0 truncate text-[15px] font-semibold">{goal.name}</span>
+              {timeLeft && (
+                <span className="shrink-0 rounded-full bg-[#f3e8ff] px-2.5 py-0.5 text-xs whitespace-nowrap text-[#6b46a8]">
+                  {timeLeft}
+                </span>
+              )}
+            </div>
+            <GoalProgressBar percent={goal.progress} label={`${goal.name} progress`} />
+          </Link>
+        )
+      })}
+      <Link to="/goals" className="inline-flex items-center gap-1 self-start text-xs font-semibold text-[#6b46a8] hover:underline">
+        {activeGoals.length > GOALS_PREVIEW_COUNT ? `View all ${activeGoals.length} goals` : 'View goals'}
+        <ArrowRight className="size-3.5" />
+      </Link>
+    </div>
   )
 }
 
 export function Dashboard({ firstName, username }) {
   const { tasks, status, refreshTasks } = useTaskStore()
+  const { goals, status: goalsStatus } = useGoals()
+  const activeGoals = useMemo(() => sortActiveGoals(goals.filter((g) => !g.completed)), [goals])
   const displayName = firstName || username || 'there'
   const now = useClock()
   const reducedMotion = usePrefersReducedMotion()
@@ -593,13 +654,13 @@ export function Dashboard({ firstName, username }) {
           )}
         />
         <QuickStartCard
-          to="/goals"
+          to="/goals/new"
           background="linear-gradient(160deg,#9b7dcd 0%,#7c5fb0 52%,#684d99 100%)"
           ink="#fff"
           accentShadow="rgba(124,95,176,.6)"
           eyebrowIcon={Target}
           eyebrowLabel="Goal"
-          meta="Coming soon"
+          meta={goalsStatus === 'ready' ? `${activeGoals.length} active` : ''}
           previewBg="rgba(0,0,0,.2)"
           title="Start a new goal"
           buttonLabel="New goal"
@@ -746,7 +807,7 @@ export function Dashboard({ firstName, username }) {
 
         <div className="flex flex-col gap-3.5">
           <h2 className="m-0 text-[23px] font-semibold text-foreground">Goals in progress</h2>
-          <GoalsComingSoonCard />
+          <GoalsInProgressCard activeGoals={activeGoals} status={goalsStatus} />
           <StreakCard streak={currentStreak} dueToday={dueToday} />
         </div>
       </div>

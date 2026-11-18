@@ -99,8 +99,53 @@ def _log_subtask_changes(subtask, before, created):
 
 
 # Create your models here.
+class Goal(models.Model):
+    """
+    A larger, longer-term target ("buy a car", "learn Spanish") that
+    tasks hang off of. Deliberately thin: it owns no steps of its own —
+    the steps *are* ordinary Tasks (and their SubTasks) pointing back
+    here via Task.goal — so everything a task already does (deadlines,
+    the activity log, the calendar, the dashboard, reminders) works for
+    goal steps with no extra machinery. Progress is never stored; it's
+    derived from those tasks (see GoalSerializer).
+
+    `targetDate` is a plain date, not a datetime: a goal's timeline is
+    "by March" / "in two months", not "by 3:15pm", and a date-only value
+    sidesteps the stored-in-UTC vs. viewer's-local-day problem the task
+    deadlines have to work around.
+    """
+
+    user = models.ForeignKey("user.CustomUser", related_name="goals", on_delete=models.CASCADE)
+    name = models.CharField(max_length=100, null=False, blank=False)
+    description = models.TextField(blank=True, null=True)
+    dateCreated = models.DateTimeField(auto_now_add=True)
+    targetDate = models.DateField(null=True, blank=True)
+    completed = models.BooleanField(default=False)
+    # Same rules as Task.dateCompleted — see _sync_date_completed.
+    dateCompleted = models.DateTimeField(null=True, blank=True)
+
+    def save(self, *args, **kwargs):
+        _sync_date_completed(self, Goal, kwargs)
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        ordering = ["-dateCreated"]
+        indexes = [
+            models.Index(fields=["user", "completed"]),
+        ]
+
+
 class Task(models.Model):
     user = models.ForeignKey("user.CustomUser", related_name="tasks", on_delete=models.CASCADE)
+    # The goal this task is a step toward, if any. SET_NULL, not CASCADE:
+    # deleting a goal detaches its tasks (they keep their history and
+    # stay in the task list) instead of silently erasing completed work.
+    goal = models.ForeignKey(
+        "Goal", related_name="tasks", on_delete=models.SET_NULL, null=True, blank=True
+    )
     name = models.CharField(max_length=100, null=False, blank=False)
     description = models.TextField(blank=True, null=True)
     dateCreated = models.DateTimeField(auto_now_add=True)

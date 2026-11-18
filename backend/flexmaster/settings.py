@@ -347,7 +347,23 @@ REST_FRAMEWORK = {
     ],
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 10,
+    "DEFAULT_THROTTLE_RATES": {
+        # Per user, per day, for the "plan this goal" questions/draft
+        # calls (see GoalViewSet.plan_*). A cost control for when a model
+        # is behind them, and harmless — generous, even — while the
+        # planner is the free built-in template. Tunable per deploy.
+        # `or`, not a get() default: .env.example ships these blank, and a
+        # blank value must mean "use the default", not "use ''".
+        "goal_plan": os.environ.get("GOAL_PLAN_THROTTLE") or "20/day",
+    },
 }
+
+# Dotted path to the class that produces goal questions/plan drafts —
+# see tasks/planner.py. The built-in template planner needs no API key
+# and makes no external calls; set this to tasks.planner.AnthropicPlanner
+# (plus ANTHROPIC_API_KEY) to have a model write plans instead.
+GOAL_PLANNER = os.environ.get("GOAL_PLANNER") or "tasks.planner.TemplatePlanner"
+GOAL_PLANNER_MODEL = os.environ.get("GOAL_PLANNER_MODEL") or "claude-sonnet-5-5"
 
 # Where the React app lives — needed because the multi-step signup flow's
 # verification email links to a React route (/signup/verify/<token>/),

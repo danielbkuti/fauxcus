@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Plus, Flame, Hammer, CalendarDays, Trash2 } from 'lucide-react'
+import { ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Plus, Flame, Target, CalendarDays, Trash2 } from 'lucide-react'
+import { useGoals } from '@/hooks/useGoals'
+import { parseTargetDate, sortActiveGoals } from '@/lib/goals'
 import { fetchSubtasksDueBetween, fetchTasksDueBetween, updateSubTask, updateTask } from '@/lib/tasks'
 import { fetchCalendarItemsDueBetween, deleteCalendarItem } from '@/lib/calendarItems'
 import { cn, URGENT_WINDOW_MS } from '@/lib/utils'
@@ -27,8 +29,8 @@ const VIEW_TYPES = [
 const WEEKDAY_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
 // The five deadline states the handoff's palette table defines, plus
-// 'goal' (unused today — Goals has no data model yet, see
-// GoalsRailCard) and 'event' — a calendar item is never overdue/urgent/
+// 'goal' (not drawn on the grid yet — goals only surface in
+// GoalsRailCard so far) and 'event' — a calendar item is never overdue/urgent/
 // done the way a task is (there's no completion, no deadline anxiety;
 // see lib/calendarItems.js), so it gets its own flat, always-steady
 // color instead of participating in the deadline-urgency states at all.
@@ -966,24 +968,56 @@ function SelectedDayCard({ date, isToday, items, nowMs, loading, onToggle, onDel
   )
 }
 
-// Goals has no data model yet (see App.jsx's own /goals route, still a
-// ComingSoonPage) — this reuses Dashboard's "Goals is on the way" tone
-// and copy, just restyled to this page's own card shell instead of
-// inventing a second "coming soon" voice for the app.
-function GoalsRailCard() {
+// Active goals whose target date falls in the current calendar month,
+// soonest first. (Goals aren't drawn on the month grid itself yet — this
+// rail card is where a goal's deadline shows up on the Calendar page.)
+function GoalsRailCard({ now }) {
+  const { goals, status } = useGoals()
+  const monthPrefix = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-`
+  const landing = sortActiveGoals(goals.filter((g) => !g.completed && g.targetDate?.startsWith(monthPrefix)))
+
   return (
     <div className="rounded-2xl bg-white p-[18px]" style={{ boxShadow: CARD_SHADOW }}>
       <p className="text-[14px] font-bold uppercase tracking-[.09em] text-[#a8a5a0]">Goals landing this month</p>
-      <Link
-        to="/goals"
-        className="group mt-3.5 flex flex-col items-center gap-2.5 rounded-xl bg-[#f5f8fd] px-4 py-6 text-center shadow-[inset_0_0_0_1px_#dbe6f5] transition-colors hover:bg-[#eef4fc]"
-      >
-        <span className="flex size-9 items-center justify-center rounded-full bg-[#1e488f]/10 text-[#1e488f] transition-transform duration-200 group-hover:scale-110">
-          <Hammer className="size-4" aria-hidden="true" />
-        </span>
-        <p className="text-sm font-semibold text-[#12314b]">Goals is on the way</p>
-        <p className="text-xs text-[#12314b]/60">Set a bigger target and track progress toward it over time.</p>
-      </Link>
+
+      {status === 'loading' && (
+        <div className="mt-3.5 flex flex-col gap-2" aria-busy="true">
+          <Skeleton className="h-11 w-full rounded-xl" />
+          <Skeleton className="h-11 w-full rounded-xl" />
+        </div>
+      )}
+
+      {status === 'error' && <p className="mt-3.5 text-xs text-red-700">Couldn&apos;t load your goals.</p>}
+
+      {status === 'ready' && landing.length === 0 && (
+        <Link
+          to="/goals"
+          className="group mt-3.5 flex flex-col items-center gap-2.5 rounded-xl bg-[#f5f8fd] px-4 py-6 text-center shadow-[inset_0_0_0_1px_#dbe6f5] transition-colors hover:bg-[#eef4fc]"
+        >
+          <span className="flex size-9 items-center justify-center rounded-full bg-[#1e488f]/10 text-[#1e488f] transition-transform duration-200 group-hover:scale-110">
+            <Target className="size-4" aria-hidden="true" />
+          </span>
+          <p className="text-sm font-semibold text-[#12314b]">No goals due this month</p>
+          <p className="text-xs text-[#12314b]/60">Set a bigger target and track progress toward it over time.</p>
+        </Link>
+      )}
+
+      {status === 'ready' && landing.length > 0 && (
+        <div className="mt-3.5 flex flex-col gap-2">
+          {landing.map((goal) => (
+            <Link
+              key={goal.id}
+              to={`/goals/${goal.id}`}
+              className="flex items-center justify-between gap-3 rounded-xl bg-[#f5f8fd] px-3.5 py-2.5 shadow-[inset_0_0_0_1px_#dbe6f5] transition-colors hover:bg-[#eef4fc]"
+            >
+              <span className="min-w-0 truncate text-sm font-semibold text-[#12314b]">{goal.name}</span>
+              <span className="shrink-0 text-xs text-[#12314b]/60">
+                {parseTargetDate(goal.targetDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+              </span>
+            </Link>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
@@ -1419,7 +1453,7 @@ export function CalendarPage() {
               canAdd={isUpcoming}
               onAddClick={() => openAddForDay(viewingDate)}
             />
-            <GoalsRailCard />
+            <GoalsRailCard now={now} />
             <StreakCard streak={currentStreak} dueToday={dueTodayCount} />
           </div>
         </div>

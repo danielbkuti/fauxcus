@@ -91,9 +91,8 @@ function ActionCard({ children, as: Tag = 'div', ...props }) {
 // authenticated page. What it offers changes with where you are: a
 // task detail page gets options scoped to *that* task (subtask,
 // deadline, description); everywhere else gets the same three
-// top-level "start something new" options. Goals doesn't have a data
-// model yet (see ComingSoonPage), so that option still just navigates
-// there; "Add a calendar item" expands into its own inline form (see
+// top-level "start something new" options. "Add a new goal" navigates
+// to the new-goal form; "Add a calendar item" expands into its own inline form (see
 // the 'calendar' activeAction below) the same way "description" does.
 //
 // The subtask and deadline options used to open their own inline
@@ -247,7 +246,7 @@ export function AddTaskFab() {
       // with it instead of the form opening blank.
       onClick: () => goTo(prefillDate ? `/tasks/new?date=${prefillDate}` : '/tasks/new'),
     },
-    { key: 'goal', label: 'Add a new goal', icon: Target, accent: COLOR_GOAL, onClick: () => goTo('/goals') },
+    { key: 'goal', label: 'Add a new goal', icon: Target, accent: COLOR_GOAL, onClick: () => goTo('/goals/new') },
     {
       key: 'calendar',
       label: 'Add a calendar item',

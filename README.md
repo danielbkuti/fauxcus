@@ -110,6 +110,11 @@ The deadline-digest scheduler is also handled differently in production than in 
 - Automatic parent-task completion propagation from subtasks
 - Per-task activity log (created, renamed, completed/reopened, deadline changes)
 
+### Goals
+- Create/edit/delete a long-term goal (a name, an optional target date, optional details) and attach ordinary tasks to it as steps; see [Goal vs. Task](#goal-vs-task) below
+- Progress derived from the goal's tasks, shown on the Goals page, the goal's own page, and the dashboard's "Goals in progress" card
+- "Suggest steps": answer a few optional questions, review/edit a proposed set of tasks and subtasks with dates, then create them; "Plan next phase" re-plans a goal that already has tasks. Plans come from a built-in template by default, or a Claude model when configured (see [Planning a goal](#planning-a-goal-suggest-steps))
+
 ### Calendar Items
 - Create/delete a calendar item — a time-anchored entry (start time, optional end time, optional location) distinct from a Task; see [Task vs. Calendar Item](#task-vs-calendar-item) below
 
@@ -180,6 +185,15 @@ Month view over tasks, subtasks, and calendar items, with deadline-state colouri
 - GET /api/subtasks/
 - POST /api/subtasks/
 - GET/PUT/PATCH/DELETE /api/subtasks/{id}/
+
+- GET /api/goals/
+- POST /api/goals/
+- GET/PUT/PATCH/DELETE /api/goals/{id}/        (progress fields are derived, read-only)
+- GET /api/tasks/?goal={id}                    (a goal's tasks)
+- GET /api/goals/{id}/plan/                    (which planner is active: "template" or "ai"; free)
+- POST /api/goals/{id}/plan/questions/         (clarifying questions; throttled per user)
+- POST /api/goals/{id}/plan/draft/             (a proposed schedule — not saved; `mode`: initial | next; throttled per user)
+- POST /api/goals/{id}/plan/accept/            (creates tasks/subtasks from the reviewed draft)
 
 - GET /api/calendar-items/
 - POST /api/calendar-items/
@@ -358,11 +372,29 @@ A Task is deadline-anchored — "finish this *by* a point in time" — and natur
 
 Deliberately kept small for a first pass: creation is a plain inline form in the FAB (native `<input type="datetime-local">`, not the app's wheel-picker `DeadlineEditor` — that component is built around a single Task deadline and a popover anchored to a trigger button, neither of which fits this menu's own small expanding card), there's no edit flow yet (delete-and-recreate), and no recurrence (a "every Monday" event is a materially harder feature — exception dates, an end condition — not a small extension of this).
 
+### Goal vs. Task
+
+A Goal is the larger, longer-term target ("buy a car", "learn Spanish"); it owns no steps of its own. The steps *are* ordinary Tasks (and their subtasks) pointing back at it through a nullable `Task.goal` foreign key (`backend/tasks/models.py`), so everything a task already does — deadlines, the activity log, the calendar, the dashboard, deadline reminders — works for a goal's steps with no extra machinery, and the data model stays two levels deep (goal → task → subtask) instead of growing a third tier of "milestones".
+
+Three choices worth knowing: progress is never stored, it's derived from the goal's tasks (the API annotates both counts in one aggregate query, so a list of goals isn't a COUNT per goal; the goal's own page recomputes it from the live task store so it stays current as tasks are completed elsewhere); `targetDate` is a plain date rather than a datetime, since a goal's timeline is "by March", not "by 3pm", which also sidesteps the UTC-vs-local-day problem task deadlines have to work around; and deleting a goal *detaches* its tasks (`SET_NULL`) instead of deleting them, so completed work isn't silently erased.
+
+#### Planning a goal ("Suggest steps")
+
+A goal can be broken into tasks and subtasks through a three-step flow — a few optional clarifying questions, a **draft** the user reviews and edits (drop or reword steps), then an explicit accept — so nothing lands in someone's task list without their say-so. Only the accept writes anything; the draft is returned to the client and never stored.
+
+The design splits the unpredictable part from the rest. Whatever produces a draft (`backend/tasks/planner.py`, chosen by `settings.GOAL_PLANNER`) returns plain JSON in a fixed schema with *relative* timing ("day 3") — models are unreliable at calendar arithmetic but fine at sequencing — and everything after that is ordinary, tested code in `backend/tasks/planning.py`: validating the draft (structural problems reject it, cosmetic ones like over-long or duplicate names are repaired), turning relative days into real dates from the user's own "today" (worked out server-side from their timezone), clamping to the goal's target date, capping how many tasks land on one day, and creating the tasks atomically. Because the user may have edited the draft, the accept call re-validates every field and date rather than trusting it. The draft response also carries plain-language warnings ("3 steps didn't fit before the target date") for the review screen.
+
+There are two planners behind the same two-method interface (`questions`, `draft`). The default is a free, deterministic template, so the flow works with no API key and no external calls. `AnthropicPlanner` asks a Claude model instead (enabled with `GOAL_PLANNER=tasks.planner.AnthropicPlanner` plus `ANTHROPIC_API_KEY`; model via `GOAL_PLANNER_MODEL`, default Sonnet 5.5). It uses structured outputs so the reply is JSON in the draft schema, wraps the user's text in tagged blocks (escaped, and the system prompt says to treat them as data, not instructions), and its output goes through the same validation as any draft, so a bad reply can only produce an error, never a malformed task. A failed or refused model call, or a missing key, surfaces as a retryable error and creates nothing. When the AI planner is active the UI says, before anything is sent, that the goal's text goes to Anthropic.
+
+Spend is bounded three ways: the questions and draft calls share a per-user daily throttle (`GOAL_PLAN_THROTTLE`, default 20/day), the demo account (whose password is public) is always served by the free template, and the API key should carry a monthly spend limit set in the Anthropic Console. `python manage.py eval_goal_planner --yes` runs sample goals through each model and writes a report of plans, tokens and cost — it makes real API calls, so it refuses to run without `--yes` and stops at a `--budget` cap.
+
+**Planning the next phase.** Once a goal has tasks, the same flow re-plans it (`mode=next` on the draft call): the planner is told what the goal already has — names, done or not, how far out each is due — and suggests only what comes next, with detail for the coming couple of weeks and coarse milestones after that. It costs one optional free-text question instead of the full set.
+
 ---
 
 # Future Improvements
 
-- Goals page (currently a placeholder)
+- Goals: tune the model-backed planner against real use (the eval command is there for it), per-step date editing on the review screen, and goals drawn on the calendar grid
 - Calendar item editing and recurrence (currently create/delete only — see [Task vs. Calendar Item](#task-vs-calendar-item))
 - JWT authentication
 

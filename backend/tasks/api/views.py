@@ -7,8 +7,15 @@ from rest_framework import viewsets, permissions, mixins, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from ..models import Task, SubTask, TaskActivity, Notification, CalendarItem
-from .serializers import TaskSerializer, SubTaskSerializer, NotificationSerializer, CalendarItemSerializer
+from django.db.models import Count, Q
+from django.utils import timezone
+from rest_framework.throttling import ScopedRateThrottle
+from ..models import Task, SubTask, TaskActivity, Notification, CalendarItem, Goal
+from ..planner import get_planner
+from ..planning import (PlanError, create_plan_tasks, resolve_timezone, schedule_from_payload,
+                        schedule_plan, schedule_to_dict, validate_plan)
+from .serializers import (TaskSerializer, SubTaskSerializer, NotificationSerializer,
+                          CalendarItemSerializer, GoalSerializer, PlanRequestSerializer)
 from rest_framework.filters import OrderingFilter
 from django_filters.rest_framework import DjangoFilterBackend
 
@@ -37,6 +44,7 @@ class TaskViewSet(viewsets.ModelViewSet):
     filterset_fields = {
         "completed": ["exact"],
         "status": ["exact"],
+        "goal": ["exact"],
         "dateDeadline": ["gte", "lte"],
     }
     ordering_fields = ["dateDeadline", "dateCreated"]
@@ -52,6 +60,174 @@ class TaskViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
+
+
+class GoalViewSet(viewsets.ModelViewSet):
+    """
+    REST API endpoint for a user's own goals — see Goal's docstring for
+    what one is. Deleting a goal detaches its tasks (Task.goal is
+    SET_NULL); it never deletes them.
+    """
+
+    serializer_class = GoalSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = {"completed": ["exact"]}
+    # Only the plan/questions and plan/draft actions opt in to throttling
+    # (they override this per-action); every other route stays unthrottled.
+    # Declared here because DRF only lets an @action override attributes
+    # the class already has.
+    throttle_scope = None
+
+    def get_queryset(self):
+        # Progress is derived from the goal's tasks, so annotate both
+        # counts onto the queryset in one aggregate query rather than
+        # one COUNT per goal when the list is serialized. distinct=True
+        # isn't needed: both counts join the same single relation.
+        return (
+            Goal.objects
+            .filter(user=self.request.user)
+            .annotate(
+                task_count=Count("tasks"),
+                completed_task_count=Count("tasks", filter=Q(tasks__completed=True)),
+            )
+            # Explicit, not left to Goal.Meta.ordering: Django drops
+            # Meta.ordering on a GROUP BY (annotate + aggregate) query,
+            # which would leave pagination with no deterministic order.
+            .order_by("-dateCreated", "-id")
+        )
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+    # ------------------------------------------------ plan this goal
+    #
+    # Three steps, and only the last one writes anything:
+    #   1. plan/questions — clarifying questions for the goal
+    #   2. plan/draft     — a proposed schedule, returned to the client and
+    #                       NOT stored; the user reviews/edits it there
+    #   3. plan/accept    — the (possibly edited) draft comes back and is
+    #                       turned into real tasks
+    # Steps 1 and 2 are the ones that can cost money once a model is behind
+    # the planner, so they share the "goal_plan" throttle scope; accepting
+    # is just database writes and isn't throttled.
+
+    def _plan_context(self, request):
+        """Validated request body + the user's own 'today', worked out
+        server-side from their timezone rather than trusted from the
+        client."""
+        serializer = PlanRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        tz = resolve_timezone(serializer.validated_data.get("timezone"))
+        today = timezone.now().astimezone(tz).date()
+        return serializer.validated_data, tz, today
+
+    @staticmethod
+    def _check_plannable(goal, today):
+        if goal.completed:
+            return Response(
+                {"detail": "This goal is already completed. Reopen it to plan more steps."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if goal.targetDate is not None and goal.targetDate < today:
+            return Response(
+                {"detail": "This goal's target date has passed. Move it to a future date first."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        return None
+
+    @action(detail=True, methods=["get"], url_path="plan")
+    def plan_info(self, request, pk=None):
+        """Which planner would serve this user ("template" or "ai"), so the
+        UI can say up front when text is about to be sent to a model.
+        Free and unthrottled: it calls nothing."""
+        self.get_object()
+        return Response({"source": get_planner(request.user).source})
+
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path="plan/questions",
+        throttle_classes=[ScopedRateThrottle],
+        throttle_scope="goal_plan",
+    )
+    def plan_questions(self, request, pk=None):
+        goal = self.get_object()
+        _data, _tz, today = self._plan_context(request)
+        problem = self._check_plannable(goal, today)
+        if problem:
+            return problem
+        horizon = (goal.targetDate - today).days if goal.targetDate else None
+        planner = get_planner(request.user)
+        try:
+            questions = planner.questions(goal, horizon)
+        except PlanError:
+            return Response(
+                {"detail": "Couldn't put a plan together just now. Please try again."},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
+        return Response({"questions": questions, "source": planner.source})
+
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path="plan/draft",
+        throttle_classes=[ScopedRateThrottle],
+        throttle_scope="goal_plan",
+    )
+    def plan_draft(self, request, pk=None):
+        goal = self.get_object()
+        data, tz, today = self._plan_context(request)
+        problem = self._check_plannable(goal, today)
+        if problem:
+            return problem
+
+        horizon = (goal.targetDate - today).days if goal.targetDate else None
+        planner = get_planner(request.user)
+        # What the goal already has, so a planner can avoid repeating it
+        # (and, for "plan the next phase", build on what's done). Capped:
+        # it ends up in a prompt.
+        existing = [
+            {
+                "name": t.name,
+                "completed": t.completed,
+                "due_in_days": (t.dateDeadline.astimezone(tz).date() - today).days
+                if t.dateDeadline
+                else None,
+            }
+            for t in goal.tasks.order_by("-dateCreated")[:60]
+        ]
+        try:
+            raw = planner.draft(
+                goal, data.get("answers", []), horizon, existing=existing, phase=data["mode"]
+            )
+            summary, tasks = validate_plan(raw)
+            schedule = schedule_plan(summary, tasks, today, goal.targetDate)
+        except PlanError:
+            # The planner's output was unusable — not the client's fault,
+            # and nothing was created, so it's safe to just try again.
+            return Response(
+                {"detail": "Couldn't put a plan together just now. Please try again."},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
+        return Response({**schedule_to_dict(schedule), "source": planner.source})
+
+    @action(detail=True, methods=["post"], url_path="plan/accept")
+    def plan_accept(self, request, pk=None):
+        goal = self.get_object()
+        _data, tz, today = self._plan_context(request)
+        problem = self._check_plannable(goal, today)
+        if problem:
+            return problem
+        try:
+            schedule = schedule_from_payload(request.data, today, goal.targetDate)
+            created = create_plan_tasks(request.user, goal, schedule, tz)
+        except PlanError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {"created": len(created), "taskIds": [t.id for t in created]},
+            status=status.HTTP_201_CREATED,
+        )
 
 
 class SubTaskViewSet(viewsets.ModelViewSet):

@@ -131,11 +131,18 @@ function FireworkShell({ em, e }) {
 // overflow:hidden; border-radius:30px` so sparks stay inside the
 // rounded corners. Fires only on `false -> true` completion, never on
 // reopen (see CompletionWash below for that side).
-export function TaskFireworks() {
+//
+// `origin` ({ left, top } in px, relative to the shell) moves the first
+// shell onto the progress dial's centre so the burst reads as coming
+// out of the ring the moment it closes. Omitted → original layout.
+export function TaskFireworks({ origin } = {}) {
   if (reducedMotion()) return null
+  const emitters = origin
+    ? [{ ...FW_EMITTERS[0], left: `${origin.left}px`, top: `${origin.top}px`, scale: 1.15 }, ...FW_EMITTERS.slice(1)]
+    : FW_EMITTERS
   return (
     <div className="task-detail-fireworks pointer-events-none absolute inset-0 z-[4] overflow-hidden rounded-[30px]" aria-hidden="true">
-      {FW_EMITTERS.map((em, e) => (
+      {emitters.map((em, e) => (
         <FireworkShell key={e} em={em} e={e} />
       ))}
     </div>

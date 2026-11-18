@@ -679,4 +679,55 @@
   .animate-view-slide-right {
     animation: none;
   }
+}/* Append to frontend/src/index.css (after the existing done-wash block). */
+
+/* --- 1b: dial landing ----------------------------------------------------
+   Fired on the frame the progress ring reaches 100% — same beat as the
+   page fireworks' first shell (which launches from the dial centre). */
+@keyframes dial-pop {
+  0%   { transform: scale(1); }
+  45%  { transform: scale(1.07); }
+  100% { transform: scale(1); }
+}
+@keyframes dial-ripple {
+  0%   { transform: scale(1);   opacity: 0.85; }
+  100% { transform: scale(1.4); opacity: 0; }
+}
+.animate-dial-pop    { animation: dial-pop 380ms ease-out; }
+.animate-dial-ripple { animation: dial-ripple 750ms ease-out forwards; }
+
+/* --- 1c: new-task rail reveal + dial trace -------------------------------
+   The rail column grows 0 → 246px (grid-template-columns transition, set
+   inline in NewTaskPage). The 246px inner panel is pinned to the
+   column's right edge, so the starfield slides out with it instead of
+   being squeezed/regenerated. Then the arc sweeps one lap and its tail
+   chases the head down to a 0% seed dot at 12 o'clock. Both properties
+   share a timing function per segment, so the head stays fixed while the
+   tail catches up. 389.56 = 2π × 62 (ProgressDial's radius). */
+@keyframes dial-trace {
+  0%   { opacity: 0; stroke-dasharray: 0.01 780; stroke-dashoffset: 0;
+         animation-timing-function: cubic-bezier(.2,.8,.2,1); }
+  2%   { opacity: 1; }
+  55%  { opacity: 1; stroke-dasharray: 389.56 780; stroke-dashoffset: 0;
+         animation-timing-function: cubic-bezier(.65,0,.35,1); }
+  100% { opacity: 1; stroke-dasharray: 0.01 780; stroke-dashoffset: -389.56; }
+}
+@keyframes dial-track-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes rail-fade-up {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-dial-trace    { animation: dial-trace 1100ms both; }
+.animate-dial-track-in { animation: dial-track-in 440ms ease-out both; }
+.animate-rail-fade-up  { animation: rail-fade-up 320ms ease-out both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-dial-pop,
+  .animate-dial-ripple,
+  .animate-dial-trace,
+  .animate-dial-track-in,
+  .animate-rail-fade-up { animation: none; }
 }
