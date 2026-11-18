@@ -10,7 +10,7 @@ from rest_framework.throttling import ScopedRateThrottle
 
 from ..models import Goal, Task
 from ..planner import TemplatePlanner, get_planner
-from ..planning import validate_plan
+from ..planning import PlanError, validate_plan
 
 
 class TemplatePlannerTests(SimpleTestCase):
@@ -55,8 +55,29 @@ class BrokenPlanner:
     def questions(self, goal):
         return []
 
-    def draft(self, goal, answers, horizon_days):
+    def draft(self, goal, answers, horizon_days, existing=(), phase="initial"):
         return {"tasks": []}
+
+
+class RaisingPlanner:
+    """Fails the way AnthropicPlanner does when the model is unreachable."""
+
+    source = "ai"
+
+    def questions(self, goal):
+        raise PlanError("down")
+
+    def draft(self, goal, answers, horizon_days, existing=(), phase="initial"):
+        raise PlanError("down")
+
+
+class RecordingPlanner(TemplatePlanner):
+    source = "ai"
+    calls = []
+
+    def draft(self, goal, answers, horizon_days, existing=(), phase="initial"):
+        RecordingPlanner.calls.append({"existing": list(existing), "phase": phase, "horizon": horizon_days})
+        return super().draft(goal, answers, horizon_days, existing, phase)
 
 
 class GoalPlanAPITests(APITestCase):
@@ -142,6 +163,83 @@ class GoalPlanAPITests(APITestCase):
             response = self.draft()
         self.assertEqual(response.status_code, 502)
         self.assertEqual(Task.objects.count(), 0)
+
+    def test_plan_info_says_which_planner_would_be_used_without_calling_it(self):
+        url = f"/api/goals/{self.goal.id}/plan/"
+        self.assertEqual(self.client.get(url).data, {"source": "template"})
+        with override_settings(GOAL_PLANNER="tasks.tests.test_goal_plan_api.RaisingPlanner"):
+            self.assertEqual(self.client.get(url).data, {"source": "ai"})
+        # Not throttled: it costs nothing.
+        with patch.dict(ScopedRateThrottle.THROTTLE_RATES, {"goal_plan": "1/day"}):
+            for _ in range(3):
+                self.assertEqual(self.client.get(url).status_code, 200)
+
+    def test_plan_info_is_private_to_the_goals_owner(self):
+        theirs = Goal.objects.create(user=self.other, name="Theirs")
+        self.assertEqual(self.client.get(f"/api/goals/{theirs.id}/plan/").status_code, 404)
+        self.client.force_authenticate(user=None)
+        self.assertEqual(self.client.get(f"/api/goals/{self.goal.id}/plan/").status_code, 403)
+
+    def test_questions_report_which_planner_wrote_them(self):
+        self.assertEqual(self.client.post(self.url("questions")).data["source"], "template")
+
+    def test_an_unavailable_model_is_a_retryable_502_for_questions_too(self):
+        with override_settings(GOAL_PLANNER="tasks.tests.test_goal_plan_api.RaisingPlanner"):
+            self.assertEqual(self.client.post(self.url("questions")).status_code, 502)
+            self.assertEqual(self.draft().status_code, 502)
+
+    def test_the_demo_account_is_always_served_by_the_free_template(self):
+        demo = get_user_model().objects.create_user(
+            username="demo", email="demo@example.com", password="x", is_active=True
+        )
+        goal = Goal.objects.create(user=demo, name="Demo goal")
+        self.client.force_authenticate(user=demo)
+        with override_settings(GOAL_PLANNER="tasks.tests.test_goal_plan_api.RaisingPlanner"):
+            response = self.client.post(self.url("questions", goal))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["source"], "template")
+
+    # ------------------------------------------------------ plan next phase
+
+    def test_mode_must_be_initial_or_next(self):
+        self.assertEqual(self.draft(mode="sideways").status_code, 400)
+
+    def test_the_planner_is_told_the_phase_and_what_the_goal_already_has(self):
+        Task.objects.create(
+            user=self.user, goal=self.goal, name="Research", completed=True,
+            dateDeadline=timezone.now() - timedelta(days=2),
+        )
+        Task.objects.create(
+            user=self.user, goal=self.goal, name="Test drive",
+            dateDeadline=timezone.now() + timedelta(days=5),
+        )
+        Task.objects.create(user=self.other, name="Not this goal's")
+        RecordingPlanner.calls = []
+        with override_settings(GOAL_PLANNER="tasks.tests.test_goal_plan_api.RecordingPlanner"):
+            response = self.draft(mode="next")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["source"], "ai")
+        call = RecordingPlanner.calls[0]
+        self.assertEqual(call["phase"], "next")
+        by_name = {t["name"]: t for t in call["existing"]}
+        self.assertEqual(set(by_name), {"Research", "Test drive"})
+        self.assertTrue(by_name["Research"]["completed"])
+        self.assertEqual(by_name["Research"]["due_in_days"], -2)
+        self.assertEqual(by_name["Test drive"]["due_in_days"], 5)
+
+    def test_default_mode_is_initial(self):
+        RecordingPlanner.calls = []
+        with override_settings(GOAL_PLANNER="tasks.tests.test_goal_plan_api.RecordingPlanner"):
+            self.draft()
+        self.assertEqual(RecordingPlanner.calls[0]["phase"], "initial")
+        self.assertEqual(RecordingPlanner.calls[0]["existing"], [])
+
+    def test_next_phase_draft_can_be_accepted_alongside_existing_tasks(self):
+        Task.objects.create(user=self.user, goal=self.goal, name="Research")
+        draft = self.draft(mode="next").data
+        response = self.accept(draft["tasks"])
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(self.goal.tasks.count(), 1 + len(draft["tasks"]))
 
     # --------------------------------------------------------------- accept
 

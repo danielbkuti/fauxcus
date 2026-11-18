@@ -27,3 +27,4 @@ whitenoise
 celery
 redis
 sentry-sdk
+anthropic

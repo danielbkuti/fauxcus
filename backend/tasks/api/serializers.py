@@ -213,3 +213,6 @@ class PlanRequestSerializer(serializers.Serializer):
     # IANA zone name from the browser (Intl.DateTimeFormat().resolvedOptions()
     # .timeZone); unrecognised values fall back to UTC server-side.
     timezone = serializers.CharField(max_length=64, required=False, allow_blank=True)
+    # "initial" plans a goal from scratch; "next" re-plans one that
+    # already has tasks, building on what's done.
+    mode = serializers.ChoiceField(choices=["initial", "next"], required=False, default="initial")

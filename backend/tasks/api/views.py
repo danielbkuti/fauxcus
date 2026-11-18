@@ -136,6 +136,14 @@ class GoalViewSet(viewsets.ModelViewSet):
             )
         return None
 
+    @action(detail=True, methods=["get"], url_path="plan")
+    def plan_info(self, request, pk=None):
+        """Which planner would serve this user ("template" or "ai"), so the
+        UI can say up front when text is about to be sent to a model.
+        Free and unthrottled: it calls nothing."""
+        self.get_object()
+        return Response({"source": get_planner(request.user).source})
+
     @action(
         detail=True,
         methods=["post"],
@@ -145,7 +153,15 @@ class GoalViewSet(viewsets.ModelViewSet):
     )
     def plan_questions(self, request, pk=None):
         goal = self.get_object()
-        return Response({"questions": get_planner().questions(goal)})
+        planner = get_planner(request.user)
+        try:
+            questions = planner.questions(goal)
+        except PlanError:
+            return Response(
+                {"detail": "Couldn't put a plan together just now. Please try again."},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
+        return Response({"questions": questions, "source": planner.source})
 
     @action(
         detail=True,
@@ -156,15 +172,30 @@ class GoalViewSet(viewsets.ModelViewSet):
     )
     def plan_draft(self, request, pk=None):
         goal = self.get_object()
-        data, _tz, today = self._plan_context(request)
+        data, tz, today = self._plan_context(request)
         problem = self._check_plannable(goal, today)
         if problem:
             return problem
 
         horizon = (goal.targetDate - today).days if goal.targetDate else None
-        planner = get_planner()
+        planner = get_planner(request.user)
+        # What the goal already has, so a planner can avoid repeating it
+        # (and, for "plan the next phase", build on what's done). Capped:
+        # it ends up in a prompt.
+        existing = [
+            {
+                "name": t.name,
+                "completed": t.completed,
+                "due_in_days": (t.dateDeadline.astimezone(tz).date() - today).days
+                if t.dateDeadline
+                else None,
+            }
+            for t in goal.tasks.order_by("-dateCreated")[:60]
+        ]
         try:
-            raw = planner.draft(goal, data.get("answers", []), horizon)
+            raw = planner.draft(
+                goal, data.get("answers", []), horizon, existing=existing, phase=data["mode"]
+            )
             summary, tasks = validate_plan(raw)
             schedule = schedule_plan(summary, tasks, today, goal.targetDate)
         except PlanError:
