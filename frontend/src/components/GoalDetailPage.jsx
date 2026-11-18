@@ -6,7 +6,15 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { GoalForm } from '@/components/GoalForm'
 import { GoalProgressBar } from '@/components/GoalProgress'
 import { useTaskStore } from '@/context/TaskStoreContext'
-import { computeGoalProgress, deleteGoal, describeTimeLeft, fetchGoal, formatTargetDate, updateGoal } from '@/lib/goals'
+import {
+  computeGoalProgress,
+  deleteGoal,
+  describeTimeLeft,
+  fetchGoal,
+  formatTargetDate,
+  planActionFor,
+  updateGoal,
+} from '@/lib/goals'
 import { cn, formatDeadline } from '@/lib/utils'
 
 function GoalDetailSkeleton() {
@@ -135,6 +143,8 @@ export function GoalDetailPage() {
     ? computeGoalProgress(goalTasks)
     : { total: goal.taskCount, done: goal.completedTaskCount, percent: goal.progress }
   const timeLeft = describeTimeLeft(goal.targetDate)
+  // "Suggest steps" for a goal with none; "Plan next phase" once it has some.
+  const planAction = planActionFor(goalTasks)
 
   async function handleSave(values) {
     setFormError(null)
@@ -257,9 +267,14 @@ export function GoalDetailPage() {
           <h2 className="text-xl font-semibold">Tasks</h2>
           <div className="flex items-center gap-2">
             {!goal.completed && (
-              <Button variant="outline" size="sm" render={<Link to={`/goals/${goalId}/plan`} />} nativeButton={false}>
+              <Button
+                variant="outline"
+                size="sm"
+                render={<Link to={`/goals/${goalId}/${planAction.to}`} />}
+                nativeButton={false}
+              >
                 <ListChecks />
-                Suggest steps
+                {planAction.label}
               </Button>
             )}
             <Button variant="outline" size="sm" render={<Link to={`/tasks/new?goal=${goalId}`} />} nativeButton={false}>

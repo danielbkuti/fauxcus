@@ -297,10 +297,12 @@ class AnthropicPlanner:
                     "format": {"type": "json_schema", "schema": schema},
                 },
             )
-        except anthropic.AnthropicError as exc:
-            # Includes a missing/invalid key and every API/network error.
-            # Logged in full for whoever runs the deploy; the user only
-            # ever sees "try again".
+        except (anthropic.AnthropicError, TypeError) as exc:
+            # Every API/network error — plus TypeError, which is what the
+            # SDK raises (not an AnthropicError) when no API key is
+            # configured at all, i.e. a misconfigured deploy. Logged in
+            # full for whoever runs it; the user only ever sees "try
+            # again", and never a 500.
             logger.exception("Goal planner call failed (model=%s)", self.model)
             raise PlanError("The planning service is unavailable.") from exc
 

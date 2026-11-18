@@ -174,6 +174,15 @@ class AnthropicPlannerDraftTests(SimpleTestCase):
         with self.assertLogs("tasks.planner", level="ERROR"), self.assertRaises(PlanError):
             self.draft(client=FakeClient(error))
 
+    def test_a_missing_api_key_is_a_plan_error_not_a_crash(self):
+        # The real SDK raises a plain TypeError at request time when no
+        # key is configured.
+        error = TypeError("Could not resolve authentication method.")
+        with self.assertLogs("tasks.planner", level="ERROR"), self.assertRaises(PlanError):
+            self.draft(client=FakeClient(error))
+        with self.assertLogs("tasks.planner", level="ERROR"), self.assertRaises(PlanError):
+            AnthropicPlanner(client=FakeClient(error)).questions(Goal())
+
     def test_thinking_blocks_before_the_text_are_skipped(self):
         blocks = [
             SimpleNamespace(type="thinking", thinking="..."),

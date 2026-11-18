@@ -9,6 +9,7 @@ import {
   formatTargetDate,
   isDraftAcceptable,
   parseTargetDate,
+  planActionFor,
   removeDraftSubtask,
   removeDraftTask,
   renameDraftTask,
@@ -161,6 +162,11 @@ describe('plan draft editing', () => {
     expect(formatPlanDate('2026-11-23', now)).not.toMatch(/2026/)
     expect(formatPlanDate('2027-01-05', now)).toMatch(/2027/)
     expect(formatPlanDate(null, now)).toBe('')
+  })
+
+  it('offers a first plan for an empty goal and a next phase once it has tasks', () => {
+    expect(planActionFor([])).toEqual({ label: 'Suggest steps', to: 'plan' })
+    expect(planActionFor([{ id: 1 }])).toEqual({ label: 'Plan next phase', to: 'plan?mode=next' })
   })
 
   it('describes plan errors by status', () => {

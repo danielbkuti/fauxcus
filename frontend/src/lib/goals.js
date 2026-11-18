@@ -144,10 +144,19 @@ export function fetchPlanQuestions(goalId) {
   return apiFetch(`/api/goals/${goalId}/plan/questions/`, { method: 'POST', body: {} })
 }
 
-export function fetchPlanDraft(goalId, answers) {
+// Which planner would write this user's plan — 'template' (built-in, no
+// external calls) or 'ai' (goal text is sent to a model). Free to call,
+// so the UI can say so *before* anything is sent.
+export function fetchPlanInfo(goalId) {
+  return apiFetch(`/api/goals/${goalId}/plan/`)
+}
+
+// `mode` is 'initial' (plan from scratch) or 'next' (re-plan a goal that
+// already has tasks, building on what's done).
+export function fetchPlanDraft(goalId, answers, mode = 'initial') {
   return apiFetch(`/api/goals/${goalId}/plan/draft/`, {
     method: 'POST',
-    body: { answers, timezone: browserTimeZone() },
+    body: { answers, mode, timezone: browserTimeZone() },
   })
 }
 
@@ -214,6 +223,16 @@ export function formatPlanDate(value, now = new Date()) {
   const options = { weekday: 'short', month: 'short', day: 'numeric' }
   if (date.getFullYear() !== now.getFullYear()) options.year = 'numeric'
   return date.toLocaleDateString(undefined, options)
+}
+
+// The one question asked when re-planning (instead of the full set).
+export const NEXT_PHASE_QUESTION = 'Has anything changed since you last planned — what’s going well, or what’s in the way?'
+
+// Re-planning only makes sense once a goal has steps to build on.
+export function planActionFor(goalTasks) {
+  return goalTasks.length > 0
+    ? { label: 'Plan next phase', to: 'plan?mode=next' }
+    : { label: 'Suggest steps', to: 'plan' }
 }
 
 // Friendly text for a failed plan call.

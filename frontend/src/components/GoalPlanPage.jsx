@@ -1,15 +1,17 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { ArrowLeft, CalendarDays, Info, TriangleAlert, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useTaskStore } from '@/context/TaskStoreContext'
 import {
+  NEXT_PHASE_QUESTION,
   acceptPlan,
   describePlanError,
   fetchGoal,
   fetchPlanDraft,
+  fetchPlanInfo,
   fetchPlanQuestions,
   formatPlanDate,
   formatTargetDate,
@@ -26,10 +28,10 @@ import {
 // always the user's to shape rather than something that just lands in
 // their task list.
 
-function QuestionsSkeleton() {
+function QuestionsSkeleton({ count = 4 }) {
   return (
     <div className="mt-8 flex flex-col gap-6" aria-busy="true">
-      {[0, 1, 2, 3].map((i) => (
+      {Array.from({ length: count }, (_, i) => (
         <div key={i} className="flex flex-col gap-2">
           <Skeleton className="h-4 w-3/4 rounded-md" />
           <Skeleton className="h-20 w-full rounded-lg" />
@@ -55,6 +57,7 @@ function DraftSkeleton() {
 
 const SOURCE_LABELS = {
   template: 'Starter outline',
+  ai: 'Suggested by AI',
 }
 
 export function GoalPlanPage() {
@@ -62,10 +65,17 @@ export function GoalPlanPage() {
   const goalId = Number(id)
   const navigate = useNavigate()
   const { refreshTasks } = useTaskStore()
+  const [searchParams] = useSearchParams()
+  // ?mode=next re-plans a goal that already has tasks: one open question
+  // instead of the full set, and the draft builds on what's done.
+  const mode = searchParams.get('mode') === 'next' ? 'next' : 'initial'
 
   const [goal, setGoal] = useState(null)
   const [questions, setQuestions] = useState([])
   const [answers, setAnswers] = useState([])
+  // 'template' | 'ai' — known before anything is sent, so the screen can
+  // say up front when text is about to go to a model.
+  const [planSource, setPlanSource] = useState(null)
   // 'loading' | 'questions' | 'drafting' | 'review' | 'creating' | 'error'
   const [stage, setStage] = useState('loading')
   const [loadError, setLoadError] = useState(null)
@@ -88,8 +98,15 @@ export function GoalPlanPage() {
           setStage('error')
           return
         }
-        const result = await fetchPlanQuestions(goalId)
+        // Re-planning asks one fixed question, so it only needs to know
+        // which planner is active (free); a first plan fetches tailored
+        // questions, which come back with the planner's source.
+        const result =
+          mode === 'next'
+            ? { ...(await fetchPlanInfo(goalId)), questions: [NEXT_PHASE_QUESTION] }
+            : await fetchPlanQuestions(goalId)
         if (cancelled) return
+        setPlanSource(result.source)
         setQuestions(result.questions)
         setAnswers(result.questions.map(() => ''))
         setStage('questions')
@@ -102,7 +119,7 @@ export function GoalPlanPage() {
     return () => {
       cancelled = true
     }
-  }, [goalId])
+  }, [goalId, mode])
 
   async function handleDraft(event) {
     event?.preventDefault()
@@ -112,7 +129,7 @@ export function GoalPlanPage() {
       const payload = questions
         .map((question, i) => ({ question, answer: answers[i].trim() }))
         .filter((a) => a.answer)
-      const result = await fetchPlanDraft(goalId, payload)
+      const result = await fetchPlanDraft(goalId, payload, mode)
       setDraft(withDraftKeys(result))
       setSource(result.source)
       setStage('review')
@@ -162,7 +179,11 @@ export function GoalPlanPage() {
   const heading = (
     <div className="mt-3">
       <h1 className="text-3xl leading-tight font-semibold">
-        {stage === 'review' || stage === 'creating' ? 'Review your plan' : 'Plan your steps'}
+        {stage === 'review' || stage === 'creating'
+          ? 'Review your plan'
+          : mode === 'next'
+            ? 'Plan the next phase'
+            : 'Plan your steps'}
       </h1>
       {goal ? (
         <p className="mt-2 flex flex-wrap items-center gap-x-3 text-sm text-muted-foreground">
@@ -185,13 +206,25 @@ export function GoalPlanPage() {
       {back}
       {heading}
 
-      {stage === 'loading' && <QuestionsSkeleton />}
+      {stage === 'loading' && <QuestionsSkeleton count={mode === 'next' ? 1 : 4} />}
 
       {stage === 'questions' && (
         <form onSubmit={handleDraft} className="mt-8 flex flex-col gap-6">
           <p className="max-w-[65ch] text-sm text-muted-foreground">
-            A few quick questions help shape the steps. Answer what you like — every question is optional.
+            {mode === 'next'
+              ? 'We’ll look at what you’ve already done and suggest what comes next. Tell us what’s changed if you like — it’s optional.'
+              : 'A few quick questions help shape the steps. Answer what you like — every question is optional.'}
           </p>
+          {planSource === 'ai' && (
+            <p className="flex max-w-[65ch] items-start gap-2 rounded-xl bg-muted/50 px-4 py-3 text-sm text-muted-foreground">
+              <Info className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+              <span>
+                Suggestions are written by an AI model (Anthropic’s Claude). Your goal’s name and details, your answers
+                {mode === 'next' ? ', and the names and due dates of this goal’s tasks' : ''} are sent to it. Nothing
+                is created until you review and accept.
+              </span>
+            </p>
+          )}
           {questions.map((question, i) => (
             <div key={question} className="flex flex-col gap-2">
               <label htmlFor={`plan-q-${i}`} className="text-sm leading-snug font-medium">
@@ -214,7 +247,7 @@ export function GoalPlanPage() {
           )}
           <div className="flex items-center gap-2">
             <Button type="submit" size="lg">
-              Suggest steps
+              {mode === 'next' ? 'Suggest next steps' : 'Suggest steps'}
             </Button>
             <Button type="button" variant="ghost" size="lg" render={<Link to={`/goals/${goalId}`} />} nativeButton={false}>
               Cancel
