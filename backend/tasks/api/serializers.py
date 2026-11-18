@@ -198,3 +198,18 @@ class NotificationSerializer(serializers.ModelSerializer):
         # detail page to link to, same convention Dashboard.jsx's
         # UpcomingRow already uses for taskId.
         read_only_fields = ["message", "dateCreated", "task"]
+
+
+class PlanAnswerSerializer(serializers.Serializer):
+    """One clarifying question and the user's answer, as sent back with a
+    plan request. Length-capped: these end up in a model prompt later."""
+
+    question = serializers.CharField(max_length=300)
+    answer = serializers.CharField(max_length=1000, allow_blank=True)
+
+
+class PlanRequestSerializer(serializers.Serializer):
+    answers = PlanAnswerSerializer(many=True, required=False, max_length=8)
+    # IANA zone name from the browser (Intl.DateTimeFormat().resolvedOptions()
+    # .timeZone); unrecognised values fall back to UTC server-side.
+    timezone = serializers.CharField(max_length=64, required=False, allow_blank=True)

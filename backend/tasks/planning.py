@@ -302,6 +302,92 @@ def schedule_plan(summary, tasks, start, target_date=None, max_per_day=MAX_TASKS
     return Schedule(summary=summary, tasks=scheduled, warnings=warnings)
 
 
+# ------------------------------------------------------ JSON round trip
+
+
+def schedule_to_dict(schedule):
+    """A Schedule as plain JSON (dates as 'YYYY-MM-DD') — the draft the
+    client shows, lets the user edit, and sends back to be accepted."""
+    return {
+        "summary": schedule.summary,
+        "warnings": list(schedule.warnings),
+        "tasks": [
+            {
+                "name": t.name,
+                "description": t.description,
+                "date": t.date.isoformat(),
+                "subtasks": [{"name": s.name, "date": s.date.isoformat()} for s in t.subtasks],
+            }
+            for t in schedule.tasks
+        ],
+    }
+
+
+def _clean_date(value, what, earliest, latest):
+    if not isinstance(value, str):
+        raise PlanError(f"{what} must be a date.")
+    try:
+        parsed = date.fromisoformat(value)
+    except ValueError:
+        raise PlanError(f"{what} must be a date like 2026-03-01.") from None
+    if parsed < earliest:
+        raise PlanError(f"{what} can't be before {earliest.isoformat()}.")
+    if latest is not None and parsed > latest:
+        raise PlanError(f"{what} can't be after the goal's target date ({latest.isoformat()}).")
+    return parsed
+
+
+def schedule_from_payload(payload, earliest, latest=None):
+    """
+    The inverse of schedule_to_dict, for a draft coming *back* from the
+    client (possibly edited — steps removed, names reworded). Nothing in
+    it is trusted: every limit validate_plan enforces is enforced again,
+    and every date must fall in [earliest, latest] — `earliest` being the
+    user's today, `latest` the goal's target date if it has one. Unlike
+    validate_plan this does not reschedule anything: the user has already
+    seen and approved these exact dates.
+    """
+    if not isinstance(payload, dict):
+        raise PlanError("The plan must be an object.")
+    raw_tasks = payload.get("tasks")
+    if not isinstance(raw_tasks, list) or not raw_tasks:
+        raise PlanError("There are no tasks to create.")
+    if len(raw_tasks) > MAX_TASKS:
+        raise PlanError(f"The plan has too many tasks (max {MAX_TASKS}).")
+
+    tasks = []
+    for i, item in enumerate(raw_tasks, start=1):
+        label = f"Task {i}"
+        if not isinstance(item, dict):
+            raise PlanError(f"{label} must be an object.")
+        name = _clean_name(item.get("name"), f"{label}'s name")
+        if not name:
+            raise PlanError(f"{label} has no name.")
+        task_date = _clean_date(item.get("date"), f"{label}'s date", earliest, latest)
+        description = item.get("description", "")
+        description = description.strip() if isinstance(description, str) else ""
+
+        raw_subtasks = item.get("subtasks", [])
+        if not isinstance(raw_subtasks, list):
+            raise PlanError(f"{label}'s subtasks must be a list.")
+        if len(raw_subtasks) > MAX_SUBTASKS_PER_TASK:
+            raise PlanError(f"{label} has too many subtasks (max {MAX_SUBTASKS_PER_TASK}).")
+        subtasks = []
+        for j, sub in enumerate(raw_subtasks, start=1):
+            if not isinstance(sub, dict):
+                raise PlanError(f"{label}, subtask {j} must be an object.")
+            sub_name = _clean_name(sub.get("name"), f"{label}, subtask {j}'s name")
+            if not sub_name:
+                continue
+            sub_date = _clean_date(sub.get("date"), f"{label}, subtask {j}'s date", earliest, latest)
+            if sub_date > task_date:
+                raise PlanError(f"{label}, subtask {j} can't be due after the task itself.")
+            subtasks.append(ScheduledSubtask(name=sub_name, date=sub_date))
+        tasks.append(ScheduledTask(name=name, description=description, date=task_date, subtasks=subtasks))
+
+    return Schedule(summary="", tasks=tasks, warnings=[])
+
+
 # ----------------------------------------------------------- persistence
 
 
