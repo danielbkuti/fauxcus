@@ -27,6 +27,8 @@ const SUBTASK_CONFETTI_MS = 2000
 // TaskDetailCelebrations.jsx), so the overlay is torn down a little
 // after the slowest spark actually finishes.
 const FIREWORKS_MS = 2700
+// Optimistic fill on "Mark complete" — the celebration waits for this.
+const DIAL_FILL_MS = 700
 const WASH_MS = 950
 // How long the "due soon, consider extending" bubble stays up before
 // fading — it's a one-time heads-up on opening the page, not a
@@ -192,7 +194,8 @@ function deadlineOutcomeClause(task) {
 }
 
 function completionBannerCopy(task) {
-  const when = formatDeadline(task.dateCompleted ?? task.dateCreated)
+  // The banner can render a beat before the server returns dateCompleted.
+  const when = formatDeadline(task.dateCompleted ?? new Date().toISOString())
   const clause = deadlineOutcomeClause(task)
   return clause ? `Completed ${when} — ${clause}` : `Completed ${when}`
 }
@@ -231,6 +234,17 @@ export function TaskDetailPage() {
   const [activeFireworks, setActiveFireworks] = useState(null) // seq number or null
   const washTimerRef = useRef(null)
   const fireworksTimerRef = useRef(null)
+  // null | 'filling' (optimistic, ring animating to 100) | 'landed' (ring
+  // closed, celebration fired; held until the server's completed=true
+  // arrives so the palette never flips back).
+  const [completePhase, setCompletePhase] = useState(null)
+  const completePhaseRef = useRef(null)
+  completePhaseRef.current = completePhase
+  const [dialCelebrateKey, setDialCelebrateKey] = useState(null)
+  const [fireworksOrigin, setFireworksOrigin] = useState(null)
+  const shellRef = useRef(null)
+  const dialRef = useRef(null)
+  const landFallbackRef = useRef(null)
   const [showDeadlineHint, setShowDeadlineHint] = useState(false)
   const [deadlineHintMounted, setDeadlineHintMounted] = useState(false)
   const hintCheckedRef = useRef(false)
@@ -254,8 +268,14 @@ export function TaskDetailPage() {
     return () => {
       clearTimeout(washTimerRef.current)
       clearTimeout(fireworksTimerRef.current)
+      clearTimeout(landFallbackRef.current)
     }
   }, [])
+
+  // Server caught up with the optimistic state — hand back to real data.
+  useEffect(() => {
+    if (completePhase === 'landed' && task?.completed) setCompletePhase(null)
+  }, [completePhase, task?.completed])
 
   // Opens this page's own subtask/deadline editor in response to
   // `?action=subtask` / `?action=deadline` on the URL — what
@@ -386,8 +406,25 @@ export function TaskDetailPage() {
 
   function fireFireworks() {
     clearTimeout(fireworksTimerRef.current)
+    // Launch the first shell from the dial's centre, in shell coordinates.
+    const shell = shellRef.current?.getBoundingClientRect()
+    const dial = dialRef.current?.getBoundingClientRect()
+    setFireworksOrigin(
+      shell && dial ? { left: dial.left - shell.left + dial.width / 2, top: dial.top - shell.top + dial.height / 2 } : null
+    )
     setActiveFireworks((prev) => (prev ?? 0) + 1)
     fireworksTimerRef.current = setTimeout(() => setActiveFireworks(null), FIREWORKS_MS)
+  }
+
+  // Called once when the ring reaches 100%. The wash, fireworks, dial pop
+  // and palette flip all fire on this same frame.
+  function handleDialFull() {
+    if (completePhaseRef.current !== 'filling') return
+    clearTimeout(landFallbackRef.current)
+    setCompletePhase('landed')
+    setDialCelebrateKey((k) => (k ?? 0) + 1)
+    fireWash('complete')
+    fireFireworks()
   }
 
   // This is the one place completing a task with open subtasks is
@@ -403,16 +440,32 @@ export function TaskDetailPage() {
   // celebrations inside the same beat would read as a glitch.
   async function handleToggleTaskComplete() {
     const next = !task.completed
-    fireWash(next ? 'complete' : 'reopen')
-    if (next) {
-      fireFireworks()
+    if (!next) {
+      fireWash('reopen')
+      await updateTask(id, { completed: false })
+      await refreshTask(id)
+      return
+    }
+    const alreadyFull = calculateProgress(task) >= 100
+    completePhaseRef.current = 'filling'
+    setCompletePhase('filling')
+    // No transition will run if the dial is already at 100 (or under
+    // reduced motion) — land straight away. Otherwise transitionend lands
+    // it; the timer is a safety net only.
+    const instant = alreadyFull || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+    landFallbackRef.current = setTimeout(handleDialFull, instant ? 0 : DIAL_FILL_MS + 150)
+    try {
       const incomplete = task.subtasks.filter((s) => !s.completed)
       if (incomplete.length > 0) {
         await Promise.all(incomplete.map((s) => updateSubTask(s.id, { completed: true })))
       }
+      await updateTask(id, { completed: true })
+      await refreshTask(id)
+    } catch (err) {
+      clearTimeout(landFallbackRef.current)
+      setCompletePhase(null)
+      throw err
     }
-    await updateTask(id, { completed: next })
-    await refreshTask(id)
   }
 
   async function handleDeleteConfirm() {
@@ -553,7 +606,9 @@ export function TaskDetailPage() {
   // The deadline owns the palette — completed always wins, then
   // overdue, then due-soon (inside URGENT_WINDOW_MS), then the calm
   // "far" default. See STATE_THEME above.
-  const stateKey = task.completed
+  // Palette flips on the ring landing, not when the server answers.
+  const showCompleted = completePhase === 'filling' ? false : completePhase === 'landed' ? true : task.completed
+  const stateKey = showCompleted
     ? 'completed'
     : deadlineStatus.isOverdue
       ? 'overdue'
@@ -563,9 +618,12 @@ export function TaskDetailPage() {
   const theme = STATE_THEME[stateKey]
   const Glyph = theme.glyph
 
-  const progress = calculateProgress(task)
+  const progress = completePhase ? 100 : calculateProgress(task)
   const totalItems = task.subtasks.length + 1
-  const completedItems = task.subtasks.filter((s) => s.completed).length + (task.completed ? 1 : 0)
+  const completedItems =
+    completePhase === 'landed' && !task.completed
+      ? totalItems
+      : task.subtasks.filter((s) => s.completed).length + (showCompleted ? 1 : 0)
 
   // Incomplete (or still-celebrating) subtasks first, in their existing
   // relative order. Completed ones follow as their own group, ordered
@@ -669,6 +727,7 @@ export function TaskDetailPage() {
   return (
     <div className="mx-auto max-w-5xl px-6 py-8">
       <div
+        ref={shellRef}
         className={cn('relative overflow-hidden rounded-[30px]', theme.pulseClass)}
         style={{
           background: theme.flood,
@@ -678,7 +737,7 @@ export function TaskDetailPage() {
       >
         <span aria-hidden="true" className="task-detail-ring" style={{ '--task-accent': theme.border }} />
         {activeWash && <CompletionWash key={activeWash.seq} kind={activeWash.kind} />}
-        {activeFireworks && <TaskFireworks key={activeFireworks} />}
+        {activeFireworks && <TaskFireworks key={activeFireworks} origin={fireworksOrigin} />}
 
         {bannerCopy && (
           <div
@@ -730,7 +789,15 @@ export function TaskDetailPage() {
               Back to tasks
             </Link>
 
-            <ProgressDial pct={progress} k={completedItems} n={totalItems} theme={theme} />
+            <ProgressDial
+              pct={progress}
+              k={completedItems}
+              n={totalItems}
+              theme={theme}
+              dialRef={dialRef}
+              celebrateKey={dialCelebrateKey}
+              onReachFull={handleDialFull}
+            />
 
             <div className="flex flex-col items-center gap-1.5">
               <PrimaryActionButton task={task} theme={theme} onClick={handleToggleTaskComplete} />
@@ -1047,44 +1114,54 @@ const RAIL_LABEL = 'rgba(255,255,255,.6)'
 // white; the fill is a per-instance gradient in the state's colours (a
 // stable id via useId, since more than one dial could theoretically
 // exist in the DOM at once and gradient ids are global).
-function ProgressDial({ pct, k, n, theme }) {
+function ProgressDial({ pct, k, n, theme, dialRef, celebrateKey, onReachFull }) {
   const gradientId = useId()
   const radius = 62
   const circumference = 389 // 2*pi*62, spelled out verbatim per the handoff
   const offset = circumference - circumference * (pct / 100)
 
   return (
-    <div className="relative mx-auto size-[150px]">
-      <svg viewBox="0 0 150 150" className="size-[150px] -rotate-90">
-        <defs>
-          <linearGradient id={gradientId} x1="0" y1="0" x2="1" y2="1">
-            {theme.ring.map((stop, i) => {
-              const [color, offsetPct] = stop.split(' ')
-              return <stop key={i} offset={offsetPct ?? `${(i / (theme.ring.length - 1)) * 100}%`} stopColor={color} />
-            })}
-          </linearGradient>
-        </defs>
-        <circle cx="75" cy="75" r={radius} fill="none" stroke="rgba(255,255,255,.14)" strokeWidth="13" />
-        <circle
-          cx="75"
-          cy="75"
-          r={radius}
-          fill="none"
-          stroke={`url(#${gradientId})`}
-          strokeWidth="13"
-          strokeLinecap="round"
-          strokeDasharray={circumference}
-          strokeDashoffset={offset}
-          style={{ transition: 'stroke-dashoffset 600ms cubic-bezier(.2,.8,.2,1)' }}
+    <div ref={dialRef} className="relative mx-auto size-[150px]">
+      {celebrateKey && (
+        <span
+          key={`r${celebrateKey}`}
+          aria-hidden="true"
+          className="animate-dial-ripple pointer-events-none absolute inset-0 rounded-full border-[3px] border-emerald-400"
         />
-      </svg>
-      <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-[42px] leading-none font-black text-white">
-          {pct}%
-        </span>
-        <span className="mt-1.5 text-[14px] font-bold" style={{ color: 'rgba(255,255,255,.75)' }}>
-          {k} of {n} done
-        </span>
+      )}
+      <div key={celebrateKey ?? 'idle'} className={cn('size-full', celebrateKey && 'animate-dial-pop')}>
+        <svg viewBox="0 0 150 150" className="size-[150px] -rotate-90">
+          <defs>
+            <linearGradient id={gradientId} x1="0" y1="0" x2="1" y2="1">
+              {theme.ring.map((stop, i) => {
+                const [color, offsetPct] = stop.split(' ')
+                return <stop key={i} offset={offsetPct ?? `${(i / (theme.ring.length - 1)) * 100}%`} stopColor={color} />
+              })}
+            </linearGradient>
+          </defs>
+          <circle cx="75" cy="75" r={radius} fill="none" stroke="rgba(255,255,255,.14)" strokeWidth="13" />
+          <circle
+            cx="75"
+            cy="75"
+            r={radius}
+            fill="none"
+            stroke={`url(#${gradientId})`}
+            strokeWidth="13"
+            strokeLinecap="round"
+            strokeDasharray={circumference}
+            strokeDashoffset={offset}
+            style={{ transition: `stroke-dashoffset ${DIAL_FILL_MS}ms cubic-bezier(.2,.8,.2,1)` }}
+            onTransitionEnd={(e) => {
+              if (e.propertyName === 'stroke-dashoffset' && pct >= 100) onReachFull?.()
+            }}
+          />
+        </svg>
+        <div className="absolute inset-0 flex flex-col items-center justify-center">
+          <span className="text-[42px] leading-none font-black text-white">{pct}%</span>
+          <span className="mt-1.5 text-[14px] font-bold" style={{ color: 'rgba(255,255,255,.75)' }}>
+            {k} of {n} done
+          </span>
+        </div>
       </div>
     </div>
   )
