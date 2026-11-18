@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, CalendarDays, CheckCircle2, Circle, Pencil, Plus, Trash2 } from 'lucide-react'
+import { ArrowLeft, CalendarDays, CheckCircle2, Circle, ListChecks, Pencil, Plus, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { GoalForm } from '@/components/GoalForm'
@@ -255,10 +255,18 @@ export function GoalDetailPage() {
       <section className="mt-10">
         <div className="mb-4 flex items-center justify-between gap-3">
           <h2 className="text-xl font-semibold">Tasks</h2>
-          <Button variant="outline" size="sm" render={<Link to={`/tasks/new?goal=${goalId}`} />} nativeButton={false}>
-            <Plus />
-            Add task
-          </Button>
+          <div className="flex items-center gap-2">
+            {!goal.completed && (
+              <Button variant="outline" size="sm" render={<Link to={`/goals/${goalId}/plan`} />} nativeButton={false}>
+                <ListChecks />
+                Suggest steps
+              </Button>
+            )}
+            <Button variant="outline" size="sm" render={<Link to={`/tasks/new?goal=${goalId}`} />} nativeButton={false}>
+              <Plus />
+              Add task
+            </Button>
+          </div>
         </div>
 
         {tasksStatus === 'loading' && (
@@ -280,6 +288,7 @@ export function GoalDetailPage() {
             <p className="text-sm font-medium">No tasks yet</p>
             <p className="mt-1 text-sm text-muted-foreground">
               Break this goal into steps — each task you add here counts toward its progress.
+              {!goal.completed && ' “Suggest steps” drafts a plan you can review and edit first.'}
             </p>
           </div>
         )}

@@ -3,11 +3,19 @@ import {
   addMonths,
   computeGoalProgress,
   daysUntil,
+  describePlanError,
   describeTimeLeft,
+  formatPlanDate,
   formatTargetDate,
+  isDraftAcceptable,
   parseTargetDate,
+  removeDraftSubtask,
+  removeDraftTask,
+  renameDraftTask,
   sortActiveGoals,
+  stripDraftKeys,
   toDateInputValue,
+  withDraftKeys,
 } from './goals'
 
 // Local noon, so no timezone/DST edge can move it across a day boundary.
@@ -99,5 +107,66 @@ describe('sortActiveGoals', () => {
     ]
     sortActiveGoals(goals)
     expect(goals.map((g) => g.id)).toEqual([1, 2])
+  })
+})
+
+describe('plan draft editing', () => {
+  const draft = () =>
+    withDraftKeys({
+      summary: 's',
+      warnings: [],
+      tasks: [
+        {
+          name: 'A',
+          description: '',
+          date: '2026-11-20',
+          subtasks: [
+            { name: 'a1', date: '2026-11-19' },
+            { name: 'a2', date: '2026-11-20' },
+          ],
+        },
+        { name: 'B', description: 'd', date: '2026-12-01', subtasks: [] },
+      ],
+    })
+
+  it('gives every task and subtask a unique key, and strips them again', () => {
+    const d = draft()
+    const keys = [...d.tasks.map((t) => t.key), ...d.tasks.flatMap((t) => t.subtasks.map((s) => s.key))]
+    expect(new Set(keys).size).toBe(4)
+    const stripped = stripDraftKeys(d)
+    expect(JSON.stringify(stripped)).not.toContain('"key"')
+    expect(stripped.tasks[0].subtasks.map((s) => s.name)).toEqual(['a1', 'a2'])
+  })
+
+  it('removes and renames by key without touching the rest', () => {
+    const d = draft()
+    const [a, b] = d.tasks
+    expect(removeDraftTask(d, a.key).tasks.map((t) => t.name)).toEqual(['B'])
+    expect(renameDraftTask(d, b.key, 'B2').tasks.map((t) => t.name)).toEqual(['A', 'B2'])
+    const trimmed = removeDraftSubtask(d, a.key, a.subtasks[0].key)
+    expect(trimmed.tasks[0].subtasks.map((s) => s.name)).toEqual(['a2'])
+    expect(d.tasks[0].subtasks).toHaveLength(2) // original untouched
+  })
+
+  it('is acceptable only with at least one named task', () => {
+    const d = draft()
+    expect(isDraftAcceptable(d)).toBe(true)
+    expect(isDraftAcceptable(removeDraftTask(removeDraftTask(d, d.tasks[0].key), d.tasks[1].key))).toBe(false)
+    expect(isDraftAcceptable(renameDraftTask(d, d.tasks[0].key, '  '))).toBe(false)
+  })
+
+  it('formats plan dates from the local calendar date, year only when not this year', () => {
+    const now = new Date(2026, 10, 18, 12)
+    expect(formatPlanDate('2026-11-23', now)).toMatch(/23/)
+    expect(formatPlanDate('2026-11-23', now)).not.toMatch(/2026/)
+    expect(formatPlanDate('2027-01-05', now)).toMatch(/2027/)
+    expect(formatPlanDate(null, now)).toBe('')
+  })
+
+  it('describes plan errors by status', () => {
+    expect(describePlanError({ status: 429 })).toMatch(/limit/)
+    expect(describePlanError({ status: 502 })).toMatch(/try again/)
+    expect(describePlanError({ status: 400, data: { detail: 'Target passed.' } })).toBe('Target passed.')
+    expect(describePlanError(new Error('x'))).toMatch(/went wrong/)
   })
 })

@@ -123,3 +123,103 @@ export function computeGoalProgress(tasks) {
   const done = tasks.filter((t) => t.completed).length
   return { total, done, percent: total ? Math.round((100 * done) / total) : 0 }
 }
+
+// ------------------------------------------------------------- planning
+//
+// "Plan this goal" is three calls (see GoalViewSet.plan_* on the
+// backend): clarifying questions, a draft schedule that is *not* saved,
+// and an accept that turns the reviewed draft into real tasks. The
+// server works out the user's "today" from the timezone sent here, so a
+// plan starts on the user's own current day, not the server's (UTC).
+
+export function browserTimeZone() {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || ''
+  } catch {
+    return ''
+  }
+}
+
+export function fetchPlanQuestions(goalId) {
+  return apiFetch(`/api/goals/${goalId}/plan/questions/`, { method: 'POST', body: {} })
+}
+
+export function fetchPlanDraft(goalId, answers) {
+  return apiFetch(`/api/goals/${goalId}/plan/draft/`, {
+    method: 'POST',
+    body: { answers, timezone: browserTimeZone() },
+  })
+}
+
+export function acceptPlan(goalId, draft) {
+  return apiFetch(`/api/goals/${goalId}/plan/accept/`, {
+    method: 'POST',
+    body: { tasks: stripDraftKeys(draft).tasks, timezone: browserTimeZone() },
+  })
+}
+
+// A draft as the review screen edits it: same shape the API returns,
+// plus a client-only `key` on every task and subtask so React keeps
+// the right row's input when one above it is removed.
+let nextKey = 0
+export function withDraftKeys(draft) {
+  return {
+    ...draft,
+    tasks: draft.tasks.map((task) => ({
+      ...task,
+      key: `t${nextKey++}`,
+      subtasks: (task.subtasks ?? []).map((sub) => ({ ...sub, key: `s${nextKey++}` })),
+    })),
+  }
+}
+
+export function stripDraftKeys(draft) {
+  return {
+    ...draft,
+    tasks: draft.tasks.map(({ key: _key, subtasks, ...task }) => ({
+      ...task,
+      subtasks: (subtasks ?? []).map(({ key: _subKey, ...sub }) => sub),
+    })),
+  }
+}
+
+export function renameDraftTask(draft, key, name) {
+  return { ...draft, tasks: draft.tasks.map((t) => (t.key === key ? { ...t, name } : t)) }
+}
+
+export function removeDraftTask(draft, key) {
+  return { ...draft, tasks: draft.tasks.filter((t) => t.key !== key) }
+}
+
+export function removeDraftSubtask(draft, taskKey, subKey) {
+  return {
+    ...draft,
+    tasks: draft.tasks.map((t) =>
+      t.key === taskKey ? { ...t, subtasks: t.subtasks.filter((s) => s.key !== subKey) } : t
+    ),
+  }
+}
+
+// A draft can be accepted when it still has at least one task and none
+// of them has been renamed to nothing.
+export function isDraftAcceptable(draft) {
+  return draft.tasks.length > 0 && draft.tasks.every((t) => t.name.trim().length > 0)
+}
+
+// 'Mon, Nov 23' — the plan's dates are plain calendar dates (see
+// parseTargetDate), shown without a year unless it isn't this one.
+export function formatPlanDate(value, now = new Date()) {
+  const date = parseTargetDate(value)
+  if (!date) return ''
+  const options = { weekday: 'short', month: 'short', day: 'numeric' }
+  if (date.getFullYear() !== now.getFullYear()) options.year = 'numeric'
+  return date.toLocaleDateString(undefined, options)
+}
+
+// Friendly text for a failed plan call.
+export function describePlanError(err) {
+  if (err?.status === 429) return 'You’ve reached today’s limit for planning. Try again tomorrow.'
+  if (err?.status === 502) return 'Couldn’t put a plan together just now. Please try again.'
+  if (err?.status === 400 && err.data?.detail) return err.data.detail
+  return 'Something went wrong. Please try again.'
+}

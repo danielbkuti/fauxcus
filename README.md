@@ -113,6 +113,7 @@ The deadline-digest scheduler is also handled differently in production than in 
 ### Goals
 - Create/edit/delete a long-term goal (a name, an optional target date, optional details) and attach ordinary tasks to it as steps; see [Goal vs. Task](#goal-vs-task) below
 - Progress derived from the goal's tasks, shown on the Goals page, the goal's own page, and the dashboard's "Goals in progress" card
+- "Suggest steps": answer a few optional questions, review/edit a proposed set of tasks and subtasks with dates, then create them (currently a built-in template; see [Planning a goal](#planning-a-goal-suggest-steps))
 
 ### Calendar Items
 - Create/delete a calendar item — a time-anchored entry (start time, optional end time, optional location) distinct from a Task; see [Task vs. Calendar Item](#task-vs-calendar-item) below
@@ -189,6 +190,9 @@ Month view over tasks, subtasks, and calendar items, with deadline-state colouri
 - POST /api/goals/
 - GET/PUT/PATCH/DELETE /api/goals/{id}/        (progress fields are derived, read-only)
 - GET /api/tasks/?goal={id}                    (a goal's tasks)
+- POST /api/goals/{id}/plan/questions/         (clarifying questions; throttled per user)
+- POST /api/goals/{id}/plan/draft/             (a proposed schedule — not saved; throttled per user)
+- POST /api/goals/{id}/plan/accept/            (creates tasks/subtasks from the reviewed draft)
 
 - GET /api/calendar-items/
 - POST /api/calendar-items/
@@ -373,11 +377,19 @@ A Goal is the larger, longer-term target ("buy a car", "learn Spanish"); it owns
 
 Three choices worth knowing: progress is never stored, it's derived from the goal's tasks (the API annotates both counts in one aggregate query, so a list of goals isn't a COUNT per goal; the goal's own page recomputes it from the live task store so it stays current as tasks are completed elsewhere); `targetDate` is a plain date rather than a datetime, since a goal's timeline is "by March", not "by 3pm", which also sidesteps the UTC-vs-local-day problem task deadlines have to work around; and deleting a goal *detaches* its tasks (`SET_NULL`) instead of deleting them, so completed work isn't silently erased.
 
+#### Planning a goal ("Suggest steps")
+
+A goal can be broken into tasks and subtasks through a three-step flow — a few optional clarifying questions, a **draft** the user reviews and edits (drop or reword steps), then an explicit accept — so nothing lands in someone's task list without their say-so. Only the accept writes anything; the draft is returned to the client and never stored.
+
+The design splits the unpredictable part from the rest. Whatever produces a draft (`backend/tasks/planner.py`, chosen by `settings.GOAL_PLANNER`) returns plain JSON in a fixed schema with *relative* timing ("day 3") — models are unreliable at calendar arithmetic but fine at sequencing — and everything after that is ordinary, tested code in `backend/tasks/planning.py`: validating the draft (structural problems reject it, cosmetic ones like over-long or duplicate names are repaired), turning relative days into real dates from the user's own "today" (worked out server-side from their timezone), clamping to the goal's target date, capping how many tasks land on one day, and creating the tasks atomically. Because the user may have edited the draft, the accept call re-validates every field and date rather than trusting it. The draft response also carries plain-language warnings ("3 steps didn't fit before the target date") for the review screen.
+
+The only planner so far is a free, deterministic template, so the flow works with no API key and no external calls. A model-backed planner would implement the same two methods (`questions`, `draft`); the questions and draft calls share a per-user daily throttle (`GOAL_PLAN_THROTTLE`, default 20/day) as a cost control for when one exists.
+
 ---
 
 # Future Improvements
 
-- Goals: LLM-generated plans (clarifying questions, then a reviewable draft of tasks and subtasks with dates), re-planning, and goals drawn on the calendar grid
+- Goals: a model-backed planner behind the existing planning flow (it currently uses a fixed template), re-planning / "plan the next phase", and goals drawn on the calendar grid
 - Calendar item editing and recurrence (currently create/delete only — see [Task vs. Calendar Item](#task-vs-calendar-item))
 - JWT authentication
 

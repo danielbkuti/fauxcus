@@ -113,8 +113,9 @@ class TemplatePlanner:
         ]
         return {
             "summary": (
-                "A starter outline: define success, research, decide, begin, then check in "
-                "along the way. Edit it to fit — it's a template, not a tailored plan."
+                "Define success, research your options, decide, begin, then check in along the "
+                "way. It's a general template, not a tailored plan — remove or reword anything "
+                "that doesn't fit before you create it."
             ),
             "tasks": tasks,
         }
