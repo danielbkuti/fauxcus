@@ -153,9 +153,14 @@ class GoalViewSet(viewsets.ModelViewSet):
     )
     def plan_questions(self, request, pk=None):
         goal = self.get_object()
+        _data, _tz, today = self._plan_context(request)
+        problem = self._check_plannable(goal, today)
+        if problem:
+            return problem
+        horizon = (goal.targetDate - today).days if goal.targetDate else None
         planner = get_planner(request.user)
         try:
-            questions = planner.questions(goal)
+            questions = planner.questions(goal, horizon)
         except PlanError:
             return Response(
                 {"detail": "Couldn't put a plan together just now. Please try again."},

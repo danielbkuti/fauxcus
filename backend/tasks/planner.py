@@ -56,7 +56,7 @@ def _short(name, limit=50):
 class TemplatePlanner:
     source = "template"
 
-    def questions(self, goal):
+    def questions(self, goal, horizon_days=None):
         return [
             "What does success look like — how will you know you've reached this goal?",
             "Where are you starting from today? (What have you already done or got?)",
@@ -216,8 +216,9 @@ planning, you ask a few short clarifying questions.
 
 Ask 3 to 5 questions whose answers would most change the plan for THIS goal: \
 the starting point, constraints (time, money, skills, health), preferences, \
-and what finishing really looks like. Do not ask about anything the goal or \
-its details already state. Each question must be one plain sentence the user \
+and what finishing really looks like. Do not ask about anything the goal, its \
+details or its <deadline> already state; in particular, never ask when the \
+user wants it done if a deadline is given. Each question must be one plain sentence the user \
 can answer in a line or two. No numbering, no preamble."""
 
 PLAN_SYSTEM = """\
@@ -332,10 +333,15 @@ class AnthropicPlanner:
             parts.append(f"<details>{_xml_escape(goal.description)}</details>")
         return "\n".join(parts)
 
-    def questions(self, goal):
+    def questions(self, goal, horizon_days=None):
+        prompt = self._goal_block(goal)
+        # Without this the model asks "when do you want this done?" about
+        # a goal that already has a date (seen in the first real eval run).
+        if horizon_days:
+            prompt += f"\n<deadline>{int(horizon_days)} days from today</deadline>"
         data = self._ask(
             QUESTIONS_SYSTEM,
-            self._goal_block(goal),
+            prompt,
             QUESTIONS_SCHEMA,
             max_tokens=1500,
             effort="low",

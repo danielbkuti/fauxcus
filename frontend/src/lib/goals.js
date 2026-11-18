@@ -141,7 +141,9 @@ export function browserTimeZone() {
 }
 
 export function fetchPlanQuestions(goalId) {
-  return apiFetch(`/api/goals/${goalId}/plan/questions/`, { method: 'POST', body: {} })
+  // The timezone lets the server work out how many days away the goal's
+  // target date is, so the questions don't ask about a date already set.
+  return apiFetch(`/api/goals/${goalId}/plan/questions/`, { method: 'POST', body: { timezone: browserTimeZone() } })
 }
 
 // Which planner would write this user's plan — 'template' (built-in, no

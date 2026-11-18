@@ -52,7 +52,7 @@ class TemplatePlannerTests(SimpleTestCase):
 class BrokenPlanner:
     source = "broken"
 
-    def questions(self, goal):
+    def questions(self, goal, horizon_days=None):
         return []
 
     def draft(self, goal, answers, horizon_days, existing=(), phase="initial"):
@@ -64,7 +64,7 @@ class RaisingPlanner:
 
     source = "ai"
 
-    def questions(self, goal):
+    def questions(self, goal, horizon_days=None):
         raise PlanError("down")
 
     def draft(self, goal, answers, horizon_days, existing=(), phase="initial"):
@@ -179,6 +179,26 @@ class GoalPlanAPITests(APITestCase):
         self.assertEqual(self.client.get(f"/api/goals/{theirs.id}/plan/").status_code, 404)
         self.client.force_authenticate(user=None)
         self.assertEqual(self.client.get(f"/api/goals/{self.goal.id}/plan/").status_code, 403)
+
+    def test_questions_are_told_how_far_off_the_target_date_is(self):
+        seen = []
+
+        class Spy(TemplatePlanner):
+            def questions(self, goal, horizon_days=None):
+                seen.append(horizon_days)
+                return super().questions(goal, horizon_days)
+
+        no_date = Goal.objects.create(user=self.user, name="Open-ended")
+        with override_settings(GOAL_PLANNER="tasks.tests.test_goal_plan_api.Spy"):
+            with patch("tasks.tests.test_goal_plan_api.Spy", Spy, create=True):
+                self.client.post(self.url("questions"), {"timezone": "UTC"}, format="json")
+                self.client.post(self.url("questions", no_date), {"timezone": "UTC"}, format="json")
+        self.assertEqual(seen, [60, None])
+
+    def test_cannot_ask_for_questions_on_a_completed_or_overdue_goal(self):
+        self.goal.completed = True
+        self.goal.save()
+        self.assertEqual(self.client.post(self.url("questions")).status_code, 400)
 
     def test_questions_report_which_planner_wrote_them(self):
         self.assertEqual(self.client.post(self.url("questions")).data["source"], "template")

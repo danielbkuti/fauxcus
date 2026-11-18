@@ -142,7 +142,7 @@ class Command(BaseCommand):
                "questions": [], "schedule": None, "seconds": 0.0, "cost": None}
         started = time.monotonic()
         try:
-            row["questions"] = planner.questions(goal)
+            row["questions"] = planner.questions(goal, days)
             # Canned answers pair with the questions this model asked, in
             # order, so the draft sees realistic answered questions.
             paired = [

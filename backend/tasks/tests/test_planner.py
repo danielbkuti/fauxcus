@@ -65,6 +65,16 @@ class AnthropicPlannerQuestionsTests(SimpleTestCase):
         self.assertIn("<goal>Learn Spanish</goal>", call["messages"][0]["content"])
         self.assertIn("<details>B1 by June</details>", call["messages"][0]["content"])
 
+    def test_the_deadline_is_given_to_the_model_and_it_is_told_not_to_ask_about_it(self):
+        client = FakeClient(reply({"questions": ["q?"]}), reply({"questions": ["q?"]}))
+        planner = AnthropicPlanner(client=client)
+        planner.questions(Goal(), 14)
+        planner.questions(Goal())
+        with_deadline, without = (c["messages"][0]["content"] for c in client.calls)
+        self.assertIn("<deadline>14 days from today</deadline>", with_deadline)
+        self.assertNotIn("deadline", without)
+        self.assertIn("never ask when the user wants it done", client.calls[0]["system"])
+
     def test_caps_the_number_and_length_of_questions(self):
         client = FakeClient(reply({"questions": ["q" * 500] + [f"Question {i}?" for i in range(10)]}))
         questions = AnthropicPlanner(client=client).questions(Goal())
