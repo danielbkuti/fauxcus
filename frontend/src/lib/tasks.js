@@ -50,14 +50,16 @@ export function fetchSubtasksDueBetween(start, end) {
   return fetchAllPages(`/api/subtasks/?${params}`)
 }
 
-export function createTask({ name, description, dateDeadline, status = 'pending', completed = false }) {
+export function createTask({ name, description, dateDeadline, goal, status = 'pending', completed = false }) {
   return apiFetch('/api/tasks/', {
     method: 'POST',
     // description/dateDeadline land as `undefined` when the caller
     // doesn't pass them (e.g. the FAB's quick options) — JSON.stringify
     // drops undefined keys entirely, so the request just omits them
     // rather than sending an explicit null.
-    body: { name, description, dateDeadline, status, completed },
+    // `goal` (a Goal id) likewise only goes out when a step is being
+    // created from inside a goal.
+    body: { name, description, dateDeadline, goal, status, completed },
   })
 }
 

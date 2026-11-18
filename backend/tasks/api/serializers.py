@@ -1,5 +1,7 @@
+from datetime import timedelta
+
 from rest_framework import serializers
-from ..models import Task, SubTask, TaskActivity, Notification, CalendarItem
+from ..models import Task, SubTask, TaskActivity, Notification, CalendarItem, Goal
 from django.utils import timezone
 
 
@@ -39,6 +41,15 @@ class SubTaskSerializer(serializers.ModelSerializer):
 
 
 class TaskSerializer(serializers.ModelSerializer):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Same cross-user guard as SubTaskSerializer's `task` field: a
+        # task can only be attached to one of the requesting user's own
+        # goals, never another user's.
+        request = self.context.get("request")
+        if request is not None:
+            self.fields["goal"].queryset = Goal.objects.filter(user=request.user)
+
     subtasks = SubTaskSerializer(many=True, read_only=True)
     days_since_created = serializers.ReadOnlyField()
     # Oldest first (see TaskActivity.Meta.ordering) — a log reads
@@ -67,6 +78,7 @@ class TaskSerializer(serializers.ModelSerializer):
         model = Task
         fields = [
             "id",
+            "goal",
             "name",
             "description",
             "dateCreated",
@@ -80,6 +92,72 @@ class TaskSerializer(serializers.ModelSerializer):
         ]
         # dateCompleted is only ever set by Task.save() reacting to
         # `completed` changing — never client-writable.
+        read_only_fields = ["dateCreated", "dateCompleted"]
+
+
+class GoalSerializer(serializers.ModelSerializer):
+    # Derived, never stored — see Goal's docstring. Read from the
+    # annotations GoalViewSet.get_queryset adds (one aggregate query for
+    # the whole list, not a count per goal); falls back to counting
+    # directly for a Goal instance that didn't come through that
+    # queryset (e.g. one just created in the same request), so the
+    # response shape is the same either way.
+    taskCount = serializers.SerializerMethodField()
+    completedTaskCount = serializers.SerializerMethodField()
+    progress = serializers.SerializerMethodField()
+
+    def _counts(self, obj):
+        total = getattr(obj, "task_count", None)
+        done = getattr(obj, "completed_task_count", None)
+        if total is None or done is None:
+            total = obj.tasks.count()
+            done = obj.tasks.filter(completed=True).count()
+        return total, done
+
+    def get_taskCount(self, obj):
+        return self._counts(obj)[0]
+
+    def get_completedTaskCount(self, obj):
+        return self._counts(obj)[1]
+
+    def get_progress(self, obj):
+        """0-100, whole percent of this goal's tasks that are completed.
+        0 for a goal with no tasks yet (nothing done, not "100% of
+        nothing")."""
+        total, done = self._counts(obj)
+        return round(100 * done / total) if total else 0
+
+    def validate_targetDate(self, value):
+        # No backdating a timeline — but with a day of grace. targetDate
+        # is a plain calendar date the viewer picked in *their* timezone,
+        # while "today" here is the server's (UTC): a viewer west of UTC
+        # picking their own today in the evening is already "tomorrow"
+        # server-side and fine, but one east of UTC just after their
+        # midnight is "yesterday" server-side. Only checked when the
+        # value is actually being changed, so an old goal whose date has
+        # since passed can still have its other fields edited.
+        if value is None:
+            return value
+        if self.instance is not None and value == self.instance.targetDate:
+            return value
+        if value < timezone.localdate() - timedelta(days=1):
+            raise serializers.ValidationError("Target date cannot be in the past.")
+        return value
+
+    class Meta:
+        model = Goal
+        fields = [
+            "id",
+            "name",
+            "description",
+            "dateCreated",
+            "targetDate",
+            "completed",
+            "dateCompleted",
+            "taskCount",
+            "completedTaskCount",
+            "progress",
+        ]
         read_only_fields = ["dateCreated", "dateCompleted"]
 
 

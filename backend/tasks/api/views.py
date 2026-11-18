@@ -7,8 +7,10 @@ from rest_framework import viewsets, permissions, mixins, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from ..models import Task, SubTask, TaskActivity, Notification, CalendarItem
-from .serializers import TaskSerializer, SubTaskSerializer, NotificationSerializer, CalendarItemSerializer
+from django.db.models import Count, Q
+from ..models import Task, SubTask, TaskActivity, Notification, CalendarItem, Goal
+from .serializers import (TaskSerializer, SubTaskSerializer, NotificationSerializer,
+                          CalendarItemSerializer, GoalSerializer)
 from rest_framework.filters import OrderingFilter
 from django_filters.rest_framework import DjangoFilterBackend
 
@@ -37,6 +39,7 @@ class TaskViewSet(viewsets.ModelViewSet):
     filterset_fields = {
         "completed": ["exact"],
         "status": ["exact"],
+        "goal": ["exact"],
         "dateDeadline": ["gte", "lte"],
     }
     ordering_fields = ["dateDeadline", "dateCreated"]
@@ -48,6 +51,40 @@ class TaskViewSet(viewsets.ModelViewSet):
             .filter(user=self.request.user)
             .select_related("user")
             .prefetch_related("subtasks", "activity_log")
+        )
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+
+class GoalViewSet(viewsets.ModelViewSet):
+    """
+    REST API endpoint for a user's own goals — see Goal's docstring for
+    what one is. Deleting a goal detaches its tasks (Task.goal is
+    SET_NULL); it never deletes them.
+    """
+
+    serializer_class = GoalSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = {"completed": ["exact"]}
+
+    def get_queryset(self):
+        # Progress is derived from the goal's tasks, so annotate both
+        # counts onto the queryset in one aggregate query rather than
+        # one COUNT per goal when the list is serialized. distinct=True
+        # isn't needed: both counts join the same single relation.
+        return (
+            Goal.objects
+            .filter(user=self.request.user)
+            .annotate(
+                task_count=Count("tasks"),
+                completed_task_count=Count("tasks", filter=Q(tasks__completed=True)),
+            )
+            # Explicit, not left to Goal.Meta.ordering: Django drops
+            # Meta.ordering on a GROUP BY (annotate + aggregate) query,
+            # which would leave pagination with no deterministic order.
+            .order_by("-dateCreated", "-id")
         )
 
     def perform_create(self, serializer):

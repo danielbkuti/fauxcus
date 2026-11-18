@@ -15,7 +15,9 @@ import { NewTaskPage } from '@/components/NewTaskPage'
 import { TaskDetailPage } from '@/components/TaskDetailPage'
 import { ProgressPage } from '@/components/ProgressPage'
 import { ProfilePage } from '@/components/ProfilePage'
-import { ComingSoonPage } from '@/components/ComingSoonPage'
+import { GoalsPage } from '@/components/GoalsPage'
+import { NewGoalPage } from '@/components/NewGoalPage'
+import { GoalDetailPage } from '@/components/GoalDetailPage'
 import { CalendarPage } from '@/components/CalendarPage'
 import { Footer } from '@/components/Footer'
 import { AddTaskFab } from '@/components/AddTaskFab'
@@ -275,7 +277,9 @@ function App() {
         <Route path="/tasks" element={<TasksPage />} />
         <Route path="/tasks/new" element={<NewTaskPage />} />
         <Route path="/tasks/:id" element={<TaskDetailPage />} />
-        <Route path="/goals" element={<ComingSoonPage title="Goals" />} />
+        <Route path="/goals" element={<GoalsPage />} />
+        <Route path="/goals/new" element={<NewGoalPage />} />
+        <Route path="/goals/:id" element={<GoalDetailPage />} />
         <Route path="/calendar" element={<CalendarPage />} />
         <Route path="/progress" element={<ProgressPage />} />
         <Route path="/profile" element={<ProfilePage />} />

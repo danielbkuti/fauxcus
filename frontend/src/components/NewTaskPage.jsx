@@ -1,8 +1,9 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useSearchParams, Link } from 'react-router-dom'
-import { ArrowLeft, Pencil } from 'lucide-react'
+import { ArrowLeft, Flag, Pencil } from 'lucide-react'
 import { DeadlineEditor } from '@/components/DeadlineEditor'
 import { createTask } from '@/lib/tasks'
+import { fetchGoal } from '@/lib/goals'
 import { useTaskStore } from '@/context/TaskStoreContext'
 import { formatDeadline } from '@/lib/utils'
 import { STATE_THEME } from '@/components/TaskDetailPage'
@@ -39,6 +40,34 @@ export function NewTaskPage() {
   const [error, setError] = useState(null)
   const [submitting, setSubmitting] = useState(false)
 
+  // Arriving from a goal's page ("Add task" there links here with
+  // ?goal=<id>) makes this task a step of that goal. The goal is fetched
+  // only to show its name; if that fails (or the id isn't a real goal of
+  // this user) the page just falls back to a plain, goal-less task rather
+  // than blocking creation.
+  const goalParam = Number(searchParams.get('goal'))
+  const hasGoalParam = Number.isInteger(goalParam) && goalParam > 0
+  const [goal, setGoal] = useState(null)
+  const [goalFailed, setGoalFailed] = useState(false)
+  useEffect(() => {
+    if (!hasGoalParam) return undefined
+    let cancelled = false
+    fetchGoal(goalParam)
+      .then((data) => {
+        if (!cancelled) setGoal(data)
+      })
+      .catch(() => {
+        if (!cancelled) setGoalFailed(true)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [goalParam, hasGoalParam])
+  // Held back from submitting until the goal has resolved either way, so
+  // a quick click can't create the task before its goal is known and
+  // silently leave it unattached.
+  const goalPending = hasGoalParam && !goal && !goalFailed
+
   // DeadlineEditor normally commits straight to the server the moment
   // its own Save is clicked (see TaskCard/TaskDetailPage) — here there
   // isn't a task to save to yet, so this just holds the picked value
@@ -58,6 +87,7 @@ export function NewTaskPage() {
         name,
         description: description.trim() ? description.trim() : undefined,
         dateDeadline,
+        goal: goal?.id,
       })
       // Fold the new task into the shared store before navigating —
       // otherwise the detail page it's about to land on would find
@@ -85,10 +115,31 @@ export function NewTaskPage() {
                 borderColor: theme.hairline,
               }}
             >
-              <Link to="/tasks" className="inline-flex items-center gap-1 text-xs font-bold" style={{ color: theme.strong }}>
+              <Link
+                to={goal ? `/goals/${goal.id}` : '/tasks'}
+                className="inline-flex items-center gap-1 text-xs font-bold"
+                style={{ color: theme.strong }}
+              >
                 <ArrowLeft className="size-3.5" />
-                Back to tasks
+                {goal ? 'Back to goal' : 'Back to tasks'}
               </Link>
+
+              {goal && (
+                <div>
+                  <p className="text-[13px] font-black tracking-[.12em] uppercase" style={{ color: theme.strong }}>
+                    Goal
+                  </p>
+                  <div
+                    className="mt-1 flex items-center gap-2 rounded-xl border bg-white px-3 py-2"
+                    style={{ borderColor: theme.hairline }}
+                  >
+                    <Flag className="size-3.5 shrink-0" style={{ color: theme.strong }} aria-hidden="true" />
+                    <span className="min-w-0 truncate text-[15px] font-black" style={{ color: theme.title }}>
+                      {goal.name}
+                    </span>
+                  </div>
+                </div>
+              )}
 
               <div ref={deadlineAnchorRef} className="relative">
                 <p className="text-[13px] font-black tracking-[.12em] uppercase" style={{ color: theme.strong }}>
@@ -122,7 +173,7 @@ export function NewTaskPage() {
                 {error && <p className="text-[14px] text-destructive">{error}</p>}
                 <button
                   type="submit"
-                  disabled={submitting || !name.trim()}
+                  disabled={submitting || goalPending || !name.trim()}
                   className="w-full rounded-full px-[18px] py-[11px] text-[18px] font-black text-white disabled:opacity-60"
                   style={{ background: theme.cta, boxShadow: theme.ctaShadow }}
                 >

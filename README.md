@@ -110,6 +110,10 @@ The deadline-digest scheduler is also handled differently in production than in 
 - Automatic parent-task completion propagation from subtasks
 - Per-task activity log (created, renamed, completed/reopened, deadline changes)
 
+### Goals
+- Create/edit/delete a long-term goal (a name, an optional target date, optional details) and attach ordinary tasks to it as steps; see [Goal vs. Task](#goal-vs-task) below
+- Progress derived from the goal's tasks, shown on the Goals page, the goal's own page, and the dashboard's "Goals in progress" card
+
 ### Calendar Items
 - Create/delete a calendar item — a time-anchored entry (start time, optional end time, optional location) distinct from a Task; see [Task vs. Calendar Item](#task-vs-calendar-item) below
 
@@ -180,6 +184,11 @@ Month view over tasks, subtasks, and calendar items, with deadline-state colouri
 - GET /api/subtasks/
 - POST /api/subtasks/
 - GET/PUT/PATCH/DELETE /api/subtasks/{id}/
+
+- GET /api/goals/
+- POST /api/goals/
+- GET/PUT/PATCH/DELETE /api/goals/{id}/        (progress fields are derived, read-only)
+- GET /api/tasks/?goal={id}                    (a goal's tasks)
 
 - GET /api/calendar-items/
 - POST /api/calendar-items/
@@ -358,11 +367,17 @@ A Task is deadline-anchored — "finish this *by* a point in time" — and natur
 
 Deliberately kept small for a first pass: creation is a plain inline form in the FAB (native `<input type="datetime-local">`, not the app's wheel-picker `DeadlineEditor` — that component is built around a single Task deadline and a popover anchored to a trigger button, neither of which fits this menu's own small expanding card), there's no edit flow yet (delete-and-recreate), and no recurrence (a "every Monday" event is a materially harder feature — exception dates, an end condition — not a small extension of this).
 
+### Goal vs. Task
+
+A Goal is the larger, longer-term target ("buy a car", "learn Spanish"); it owns no steps of its own. The steps *are* ordinary Tasks (and their subtasks) pointing back at it through a nullable `Task.goal` foreign key (`backend/tasks/models.py`), so everything a task already does — deadlines, the activity log, the calendar, the dashboard, deadline reminders — works for a goal's steps with no extra machinery, and the data model stays two levels deep (goal → task → subtask) instead of growing a third tier of "milestones".
+
+Three choices worth knowing: progress is never stored, it's derived from the goal's tasks (the API annotates both counts in one aggregate query, so a list of goals isn't a COUNT per goal; the goal's own page recomputes it from the live task store so it stays current as tasks are completed elsewhere); `targetDate` is a plain date rather than a datetime, since a goal's timeline is "by March", not "by 3pm", which also sidesteps the UTC-vs-local-day problem task deadlines have to work around; and deleting a goal *detaches* its tasks (`SET_NULL`) instead of deleting them, so completed work isn't silently erased.
+
 ---
 
 # Future Improvements
 
-- Goals page (currently a placeholder)
+- Goals: LLM-generated plans (clarifying questions, then a reviewable draft of tasks and subtasks with dates), re-planning, and goals drawn on the calendar grid
 - Calendar item editing and recurrence (currently create/delete only — see [Task vs. Calendar Item](#task-vs-calendar-item))
 - JWT authentication
 
