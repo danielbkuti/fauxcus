@@ -1543,3 +1543,111 @@ two tool surfaces worth knowing about if a future session needs to script the li
 This section itself was requested directly ("give me the handoff docs") rather than written
 unprompted. Written from a clean shared checkout at `b2c9dec` (see above), in its own worktree
 per the usual convention, then landed the same way as everything else this session.
+
+## GitHub unblocked, five backlogged branches actually landed on `main` — this conversation (Sep 17 2026)
+Started a **new session**, asked to "check GitHub and make the commits." Context: a prior
+session had discovered the GitHub account itself was suspended, blocking any push/PR/merge —
+that was the reason five branches' worth of work (Vitest+RTL tests, real footer links,
+Postgres-backed rate limiting, Sentry + the full Calendar rebuild) had been sitting local-only
+across multiple sessions. First step was confirming, not assuming, that this was still true:
+`git fetch origin` and `gh auth status` both succeeded cleanly — **the suspension is resolved**.
+Everything below is the result of actually landing that backlog.
+
+**Deviation from this file's own convention, flagged the same way earlier sessions have flagged
+similar ones**: this session worked **directly in the shared checkout**
+(`/Users/flexduck/Projects/flexmaster`), not an isolated worktree via `EnterWorktree`, for the
+whole session — see [[handoff-doc-scoping]]. That convention exists to keep sessions from
+stepping on each other's uncommitted work, but real push/PR/merge/cleanup operations (checking
+out different branches to resolve merge conflicts, deleting/renaming things, watching CI) need
+one real, non-parallel checkout with normal write access — the worktree guardrail (see the
+"ConfettiBurst..." section above: writes to the shared checkout are hard-blocked from inside an
+`EnterWorktree` session) would have actively prevented this work, not just complicated it. This
+was a deliberate, necessary choice, not an oversight.
+
+**Before touching anything**, `git status` showed the shared checkout had ~22 lines of stray
+uncommitted changes (leftover residue from an earlier session's `docker cp` workflow, unrelated
+to this session's own work and already present, in substance, in already-merged branch content).
+Per this environment's own safety rule, stashed rather than discarded or folded in:
+`git stash push -u -m "main-checkout-docker-cp-residue-2026-09-17"`
+(`7bccdcd0972008325525d07f2ed2644313c5881c`). **Left stashed, not restored** — still sitting at
+`stash@{0}` as of this write-up. A future session should check `git stash list` before assuming
+the working tree's history is fully accounted for, and can safely drop it once confirmed
+redundant.
+
+**The five PRs, merged in this order** (all `gh pr create --base main` + `gh pr merge --merge`,
+verified via `gh pr checks`/CI before each merge — real GitHub Actions runs, not local trust,
+since local Docker wasn't running this session — see below):
+
+1. **PR #9** — "Add frontend test coverage: Vitest + React Testing Library"
+   (`worktree-frontend-vitest-rtl` → `main`, merge commit `87bb289`). 28 tests across 5 files.
+2. **PR #11** — "Hotfix: revert TaskList loading test to match main's current rendering"
+   (`hotfix-tasklist-loading-test` → `main`, merge commit `3d425eb`). Not part of the original
+   plan — see "The hotfix" below for why this had to happen mid-sequence.
+3. **PR #10** — "Replace placeholder footer links with real, verifiable ones"
+   (`worktree-footer-real-links` → `main`, merge commit `6398b91`). Needed a second push (merging
+   `main` back into the branch) after PR #11 landed, to force GitHub to compute a fresh
+   merge-ref — `gh run rerun` on the original failing run replays the *same stale* merge-ref
+   rather than recomputing one against the new base, so it kept showing the old failure even
+   after the fix was on `main`.
+4. **PR #12** — "Back rate limiting with Postgres instead of Django's in-memory cache"
+   (`worktree-db-backed-rate-limit` → `main`, merge commit `b3b1d99`). Verified via CI's own
+   Postgres service container, not locally — this machine's Docker daemon wasn't running this
+   session (`Cannot connect to the Docker daemon at unix:///Users/flexduck/.docker/run/docker.sock`),
+   so GitHub Actions' isolated environment was the actual source of truth here, checked before
+   merging same as every other PR.
+5. **PR #13** — "Sentry error monitoring + full Calendar page rebuild (skeleton loaders, calendar
+   items)" (`worktree-sentry-error-monitoring` → `main`, merge commit `9e3efa3`). The largest of
+   the five — this is the PR that actually ships the Calendar page (see "Known gaps" at the top
+   of this file, which still says Calendar is a placeholder — **it no longer is**, as of this
+   PR), CalendarItem model/API, Sentry (`sentry_sdk.init()`, gated on `SENTRY_DSN` being set),
+   and the skeleton-loader convention CLAUDE.md requires.
+
+**The hotfix (PR #11) and why it existed**: PR #10's CI failed on
+`TaskList.test.jsx`'s skeleton-loader assertion (`expected 0 to be greater than 0`), because
+`main` didn't have the skeleton-loader `TaskList.jsx` change yet — that lives on PR #13, merged
+*after* #10 in this sequence. The test had been written, in an earlier session, assuming both
+branches' work was already combined (true in the old `local-preview` integration branch, false
+on real `main` in this merge order). Fixed in two steps rather than reordering the whole
+sequence: PR #11 reverted the assertion to match `main`'s actual then-current (pre-skeleton)
+rendering, with a comment flagging that the real fix would land with the Calendar PR — then PR
+#13's own merge-with-`main` restored the genuine skeleton-based assertion, exactly as that
+comment predicted. `main` was never left red at any point in the sequence.
+
+**Recurring README.md merge conflict**, same pattern this file has documented before: merging
+`main` into `worktree-sentry-error-monitoring` conflicted in the Engineering Decisions section,
+because both sides had appended their own entries there. Resolved by keeping **both** sides
+(main's "Database-Backed Rate Limiting Over Django's Cache" section from PR #12, this branch's
+own Sentry / Skeleton Loaders / Task-vs-Calendar-Item sections), rate-limiting ordered first —
+never drop either side's content, per this file's own long-standing pattern for this exact
+conflict shape.
+
+**Other fixes hit along the way**: stale `node_modules` in the shared checkout
+(`ERR_MODULE_NOT_FOUND` on `npx vitest run`) — fixed with a plain `npm install` (435
+added/328 removed, matching the newly-merged Vitest infra's own dependency changes). A transient
+"claude-sonnet-5[1m] is temporarily unavailable (rate-limited)" classifier hiccup on the very
+first `git fetch origin` — resolved by simply retrying the identical command a moment later, not
+a real GitHub problem.
+
+**Branch cleanup — did not delete anything**, matching this repo's own "nothing's ever deleted
+here" convention (see "Git state right now" and the post-merge-cleanup section above, where
+deletion only happened once on a direct, explicit one-time request — no such request was made
+this session). Remote branches still on `origin` after all five merges:
+`hotfix-tasklist-loading-test`, `worktree-confetti-fix-and-subtask-deadline-purple` (old, from
+PR #3, unrelated to this session), `worktree-db-backed-rate-limit`, `worktree-footer-real-links`,
+`worktree-sentry-error-monitoring`. (`worktree-frontend-vitest-rtl`'s remote branch is no longer
+present — not something this session deleted; flagging rather than guessing why.) The local
+`local-preview` branch (an old ad hoc integration branch mentioned in earlier sessions) still
+exists and is **not** an ancestor of `main` (checked with `git merge-base --is-ancestor
+local-preview main`, which failed) — don't assume it's safe to drop without diffing it first, a
+future session should check what it actually still holds rather than trust an assumption that it
+became redundant once everything landed on `main`.
+
+**Not verified this session**: whether the production Render deployment actually picked up
+`main`'s new tip (`9e3efa3`) via auto-deploy — this session never checked Render's own dashboard
+or hit the live URL. Worth confirming before assuming the Calendar/Sentry/rate-limiting work is
+live in production, not just merged to `main`.
+
+**End state**: shared checkout on `main`, `main` and `origin/main` both at `9e3efa3`, working
+tree clean apart from the one stash left in place (`stash@{0}`,
+`main-checkout-docker-cp-residue-2026-09-17`). All five PRs (#9–#13) merged, in the order above,
+each verified green via real GitHub Actions CI (not local Docker) before merging.
