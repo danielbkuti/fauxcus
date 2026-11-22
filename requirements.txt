@@ -28,3 +28,4 @@ celery
 redis
 sentry-sdk
 anthropic
+packaging
