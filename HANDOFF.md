@@ -1572,7 +1572,8 @@ Per this environment's own safety rule, stashed rather than discarded or folded 
 (`7bccdcd0972008325525d07f2ed2644313c5881c`). **Left stashed, not restored** — still sitting at
 `stash@{0}` as of this write-up. A future session should check `git stash list` before assuming
 the working tree's history is fully accounted for, and can safely drop it once confirmed
-redundant.
+redundant. **Update (Nov 23 2026): this stash has since been checked and dropped** — see
+"Old stash checked and dropped" at the end of this file.
 
 **The five PRs, merged in this order** (all `gh pr create --base main` + `gh pr merge --merge`,
 verified via `gh pr checks`/CI before each merge — real GitHub Actions runs, not local trust,
@@ -1651,3 +1652,23 @@ live in production, not just merged to `main`.
 tree clean apart from the one stash left in place (`stash@{0}`,
 `main-checkout-docker-cp-residue-2026-09-17`). All five PRs (#9–#13) merged, in the order above,
 each verified green via real GitHub Actions CI (not local Docker) before merging.
+
+## Old stash checked and dropped — this conversation (Nov 23 2026)
+Corrects the "GitHub unblocked..." section above: `stash@{0}`
+(`main-checkout-docker-cp-residue-2026-09-17`, `7bccdcd`) **no longer exists**; `git stash list`
+is empty. It was also much bigger than "~22 lines": 26 files, ~4,000 lines, based on `427b023`
+(Sep 6).
+
+Checked file by file against `main` before dropping:
+- **Backend code, all already on `main`**: Celery setup, CalendarItem model/API/migrations,
+  Postgres-backed rate limiting, and their tests. 19 files identical to `main`; in the other 6,
+  `main` is strictly newer. The only stash-only lines were four old import lines that `main` has
+  since extended with `Goal`.
+- **`design_handoff_calendar_page/`, the only content not anywhere else**: the Calendar "Glass"
+  design spec (README, `Calendar Page.dc.html` prototype + `support.js`, two starfield JPGs).
+  Restored to the repo root (byte-identical to the stash) and **left untracked on purpose**,
+  hidden via `.git/info/exclude` (local to this machine — a fresh clone won't have it).
+  `CalendarPage.jsx`'s header comment cites its README.
+
+Same session, also landed: `packaging` added to `requirements.txt` (Celery's redis transport
+crashed without it) — commit `a8ccd39`, pushed to `origin/main`.
