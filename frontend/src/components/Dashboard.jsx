@@ -322,10 +322,18 @@ export function Dashboard({ firstName, username }) {
           due += 1
       }
     }
-    // Feeds the Task quick-start card's mini checklist: up to two real
-    // open tasks (these tick on hover) plus the most recently completed
-    // one, if any, as a pre-done third row.
-    const open = tasks.filter((t) => !t.completed).slice(0, 2)
+    // Feeds the Task quick-start card's mini checklist: the two open tasks
+    // due soonest (these tick on hover) plus the most recently completed
+    // one, if any, as a pre-done third row. Sorted here rather than taking
+    // the API's order, which puts tasks without a deadline first; those
+    // only fill in when fewer than two open tasks have a deadline.
+    const open = tasks
+      .filter((t) => !t.completed)
+      .sort((a, b) => {
+        if (!a.dateDeadline || !b.dateDeadline) return (a.dateDeadline ? 0 : 1) - (b.dateDeadline ? 0 : 1)
+        return new Date(a.dateDeadline) - new Date(b.dateDeadline)
+      })
+      .slice(0, 2)
     const doneTask = [...tasks]
       .filter((t) => t.completed && t.dateCompleted)
       .sort((a, b) => new Date(b.dateCompleted) - new Date(a.dateCompleted))[0]
