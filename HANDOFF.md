@@ -1672,3 +1672,40 @@ Checked file by file against `main` before dropping:
 
 Same session, also landed: `packaging` added to `requirements.txt` (Celery's redis transport
 crashed without it) — commit `a8ccd39`, pushed to `origin/main`.
+
+## Local re-seed, Quick start "1a Night cartridge" cards, soonest-due fix — this conversation (Nov 24–28 2026)
+Same conversation as the stash section above, after a laptop reset. Everything below is pushed
+to `origin/main`, CI green, and confirmed in Render's deployed bundle (not just merged).
+
+**Local demo data.** The reset wiped the Docker Postgres volume, so the local DB started empty
+(0 users, 0 tasks). Re-seeded with the same command production uses:
+`docker compose exec web python backend/manage.py seed_demo_data` → `demo@example.com` /
+`DemoPass123!`, 38 tasks (26 done), 10 subtasks. The old hand-made local test data (and its
+different password, see "Test login" above) is not recoverable. A stray local task named "fake"
+(created in the browser pane, no deadline) was deleted on request.
+
+**Quick start banners rebuilt (`52730f8`).** The user's later banner work had never been
+pushed and was lost in the reset; they re-supplied the design as an export
+(`quickstart-1a`: README, `QuickStartCards.jsx`, CSS, `starfield-8bit.js`). Landed as:
+- New `frontend/src/components/QuickStartCards.jsx`: starfield cards, stepped-pixel corners
+  (clip-path), pixel-sprite icons, stepped hover loops. Real data: open tasks + latest completed
+  one, the soonest-due active goal (`activeGoals[0]`, replacing the old hardcoded "Ship v2 · 82%"
+  preview), this week.
+- `Dashboard.jsx`: old glass `QuickStartCard`/`TaskPreviewRow`, `weekCells` and
+  `usePrefersReducedMotion` removed. `index.css`: old `fx*` keyframes replaced by `.qs-*` styles.
+- Deviations from the export: its `starfield-8bit.js` was byte-identical to the repo's, so not
+  copied; Jersey 10 was already loaded, so its font `@import` was dropped; animations also run on
+  `:focus-visible` (its README said so, its CSS only had `:hover`); Task/Goal panels show
+  skeleton rows while loading, per CLAUDE.md.
+- Not yet seen with real goal data: the demo account has no goals, so the Goal card shows its
+  empty state.
+
+**Task card shows soonest-due tasks (`b24a33c`).** The card took the first two open tasks in
+the API's order (`-dateDeadline`, and Postgres sorts NULL deadlines first), so undated or far-off
+tasks were featured. Now sorted ascending by deadline (overdue first, matching Upcoming); undated
+tasks only fill in when fewer than two open tasks have a deadline.
+
+**Also this conversation:** `packaging` added to `requirements.txt` (`a8ccd39`, see the stash
+section above). `origin/backup/stash-docker-cp-residue-2026-09-17` is a pushed backup of the
+dropped stash, so its contents (including `design_handoff_calendar_page/`) also live on GitHub.
+Live site: https://fauxcus-api.onrender.com.
